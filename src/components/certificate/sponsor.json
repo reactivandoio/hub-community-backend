@@ -1,0 +1,18 @@
+{
+  "collectionName": "components_certificate_sponsors",
+  "info": {
+    "displayName": "Sponsor",
+    "description": "Patrocinador exibido no rodapé do certificado"
+  },
+  "options": {},
+  "attributes": {
+    "name": { "type": "string", "required": true },
+    "logo": {
+      "type": "media",
+      "multiple": false,
+      "required": true,
+      "allowedTypes": ["images"]
+    },
+    "url": { "type": "string" }
+  }
+}

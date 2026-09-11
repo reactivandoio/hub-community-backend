@@ -1,0 +1,18 @@
+{
+  "collectionName": "components_certificate_signatures",
+  "info": {
+    "displayName": "Signature",
+    "description": "Assinatura (nome, cargo e imagem opcional) no certificado"
+  },
+  "options": {},
+  "attributes": {
+    "name": { "type": "string", "required": true },
+    "role": { "type": "string" },
+    "image": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    }
+  }
+}

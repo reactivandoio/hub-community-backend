@@ -106,6 +106,12 @@
       "relation": "oneToMany",
       "target": "api::attendance.attendance",
       "mappedBy": "event"
+    },
+    "certificate_config": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::certificate-config.certificate-config",
+      "mappedBy": "event"
     }
   }
 }

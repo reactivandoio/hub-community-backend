@@ -1,0 +1,50 @@
+{
+  "kind": "collectionType",
+  "collectionName": "certificate_configs",
+  "info": {
+    "singularName": "certificate-config",
+    "pluralName": "certificate-configs",
+    "displayName": "Certificate Config",
+    "description": "Modelo do certificado de participação de um evento"
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {},
+  "attributes": {
+    "event": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::event.event",
+      "inversedBy": "certificate_config"
+    },
+    "enabled": { "type": "boolean", "default": false },
+    "allow_self_request": { "type": "boolean", "default": true },
+    "title": { "type": "string", "default": "Certificado de Participação" },
+    "body_template": { "type": "text" },
+    "workload_hours": { "type": "decimal" },
+    "issuer_name": { "type": "string" },
+    "primary_color": { "type": "string", "regex": "^#[0-9a-fA-F]{6}$" },
+    "logo": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    },
+    "background": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    },
+    "sponsors": {
+      "type": "component",
+      "repeatable": true,
+      "component": "certificate.sponsor"
+    },
+    "signatures": {
+      "type": "component",
+      "repeatable": true,
+      "component": "certificate.signature",
+      "max": 4
+    }
+  }
+}
