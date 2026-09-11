@@ -1,0 +1,37 @@
+{
+  "kind": "collectionType",
+  "collectionName": "certificates",
+  "info": {
+    "singularName": "certificate",
+    "pluralName": "certificates",
+    "displayName": "Certificate",
+    "description": "Certificado de participação emitido para uma pessoa em um evento"
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {},
+  "attributes": {
+    "code": { "type": "string", "required": true, "unique": true },
+    "event": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::event.event",
+      "inversedBy": "certificates"
+    },
+    "users_permissions_user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "name": { "type": "string", "required": true },
+    "identifier": { "type": "string", "required": true, "minLength": 11, "maxLength": 11 },
+    "email": { "type": "email", "required": true },
+    "source": {
+      "type": "enumeration",
+      "enum": ["ATTENDANCE", "SELF_REQUEST", "ADMIN"],
+      "required": true
+    },
+    "issued_at": { "type": "datetime" },
+    "sent_at": { "type": "datetime" },
+    "revoked_at": { "type": "datetime" }
+  }
+}

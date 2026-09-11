@@ -540,6 +540,57 @@ export interface ApiCertificateConfigCertificateConfig
   };
 }
 
+export interface ApiCertificateCertificate extends Struct.CollectionTypeSchema {
+  collectionName: 'certificates';
+  info: {
+    description: 'Certificado de participa\u00E7\u00E3o emitido para uma pessoa em um evento';
+    displayName: 'Certificate';
+    pluralName: 'certificates';
+    singularName: 'certificate';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    code: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    email: Schema.Attribute.Email & Schema.Attribute.Required;
+    event: Schema.Attribute.Relation<'manyToOne', 'api::event.event'>;
+    identifier: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 11;
+        minLength: 11;
+      }>;
+    issued_at: Schema.Attribute.DateTime;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::certificate.certificate'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
+    revoked_at: Schema.Attribute.DateTime;
+    sent_at: Schema.Attribute.DateTime;
+    source: Schema.Attribute.Enumeration<
+      ['ATTENDANCE', 'SELF_REQUEST', 'ADMIN']
+    > &
+      Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    users_permissions_user: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+  };
+}
+
 export interface ApiCommentReplyCommentReply
   extends Struct.CollectionTypeSchema {
   collectionName: 'comment_replies';
@@ -872,6 +923,10 @@ export interface ApiEventEvent extends Struct.CollectionTypeSchema {
     certificate_config: Schema.Attribute.Relation<
       'oneToOne',
       'api::certificate-config.certificate-config'
+    >;
+    certificates: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::certificate.certificate'
     >;
     comments: Schema.Attribute.Relation<'oneToMany', 'api::comment.comment'>;
     communities: Schema.Attribute.Relation<
@@ -1902,6 +1957,7 @@ declare module '@strapi/strapi' {
       'api::analytics-event.analytics-event': ApiAnalyticsEventAnalyticsEvent;
       'api::attendance.attendance': ApiAttendanceAttendance;
       'api::certificate-config.certificate-config': ApiCertificateConfigCertificateConfig;
+      'api::certificate.certificate': ApiCertificateCertificate;
       'api::comment-reply.comment-reply': ApiCommentReplyCommentReply;
       'api::comment.comment': ApiCommentComment;
       'api::community.community': ApiCommunityCommunity;
