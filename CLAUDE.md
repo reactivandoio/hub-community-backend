@@ -32,18 +32,29 @@ config/             # Server, database, API, middleware, plugin, admin config
 database/migrations # Database migration scripts
 public/             # Static assets
 src/
-  api/              # API modules (11 entities)
+  api/              # API modules (22 entities)
     agenda/         # User event agendas
+    analytics-event/    # Tracking events
+    attendance/         # Lista de presença (user × event)
+    certificate/        # Issued participation certificates (unique code, idempotent per event+CPF)
+    certificate-config/ # Per-event certificate template (sponsors, signatures, text)
     comment/        # Comments on events/talks/communities
     comment-reply/  # Threaded comment replies
     community/      # Communities with organizers, tags, events
     event/          # Events with talks, tags, location
+    event-feedback/     # Post-event NPS survey
     link/           # Social media links
     location/       # Geographic locations (lat/lng)
+    participant/        # Legacy certificate requests (kept for data; new flow uses certificate)
     rate/           # Ratings (1-5) on talks/events
     speaker/        # Talk speakers with bio, avatar, links
+    sw-form/            # Startup Weekend volunteer form
     tag/            # Tags for events and communities
     talk/           # Talks within events
+    team/               # Teams within an event (custom actions: changeLead, leaveTeam, uploadPresentation)
+    vote/           # Public voting
+    voting-option/  # Voting options
+    voting-session/  # Public voting sessions
   extensions/
     users-permissions/  # Custom user auth schema extensions
 types/              # TypeScript type definitions
@@ -61,14 +72,14 @@ api/{entity}/
 ## Architecture Patterns
 
 ### Factory Pattern
-All controllers and routes use Strapi factory defaults. No custom endpoints exist:
+Most modules use factory defaults. Custom routes exist in `team` (`routes/custom-change-lead.ts`) and `voting-session` (`routes/custom-results.ts`, `getResults`):
 ```typescript
 export default factories.createCoreController('api::event.event');
 export default factories.createCoreRouter('api::event.event');
 ```
 
 ### Soft Deletes
-5 entities use soft delete (Event, Community, Talk, Speaker, Location). The `delete()` method is overridden to set `deleted_at` instead of removing the record:
+6 entities use soft delete (Event, Community, Talk, Speaker, Location, Certificate). The `delete()` method is overridden to set `deleted_at` (or `revoked_at` for Certificate) instead of removing the record:
 ```typescript
 async delete(documentId: string, params: any) {
   return super.update(documentId, {
@@ -77,7 +88,7 @@ async delete(documentId: string, params: any) {
   });
 }
 ```
-Entities WITHOUT soft delete: Agenda, Comment, CommentReply, Tag, Link, Rate.
+Entities WITHOUT soft delete: Agenda, Analytics-Event, Attendance, Certificate-Config, Comment, CommentReply, Event-Feedback, Link, Participant, Rate, Sw-Form, Tag, Team, Vote, Voting-Option, Voting-Session.
 
 ### Slug Generation
 Event and Community auto-generate unique slugs on `create()` and `update()` via `generateUniqueSlug()`:
@@ -86,6 +97,9 @@ Event and Community auto-generate unique slugs on `create()` and `update()` via 
 - Collision handling: appends `-2`, `-3`, etc.
 - On update, excludes current entity from uniqueness check via `documentId: { $ne: entityId }`
 - Throws `Error("Title is required to generate slug")` if title is missing
+
+### Certificate issuing
+`api::certificate` `create()` is idempotent per `(event, identifier)`: it returns the existing non-revoked certificate instead of creating a duplicate. Input validation via `validateIssueInput` (event required, 11-digit CPF). `code` is `RCT-` + 8 chars from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`, allocated with collision retry (max 5). Pure logic lives in `services/certificate-helpers.ts` (tested). Components: `certificate.sponsor`, `certificate.signature`.
 
 ### Schema Validation
 All validation is declarative in `schema.json` files — not in code. Patterns include:
@@ -159,7 +173,7 @@ See `.env.example` for the full list. Key groups:
 - Framework: Vitest 4.x
 - Test files co-located with services: `src/api/{entity}/services/{entity}.test.ts`
 - Mock pattern: create mock strapi with `vi.fn()` for `entityService.findMany`
-- Current coverage: slug generation for events (special chars, truncation, duplicates, edge cases)
+- Current coverage: slug generation for events (special chars, truncation, duplicates, edge cases); certificate code/idempotency helpers
 
 ## Git Conventions
 - Mix of conventional commits (`feat:`, `fix:`) and informal messages
