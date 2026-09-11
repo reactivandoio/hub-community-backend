@@ -9,21 +9,13 @@ import { factories } from '@strapi/strapi';
 import {
   allocateUniqueCode,
   findActiveCertificate,
-  normalizeIdentifier,
+  validateIssueInput,
 } from './certificate-helpers';
 
 export default factories.createCoreService('api::certificate.certificate', ({ strapi }) => ({
   async create(params: any) {
     const data = params?.data || {};
-    const identifier = normalizeIdentifier(data.identifier);
-    const eventDocumentId = typeof data.event === 'string' ? data.event : data.event?.documentId;
-
-    if (!eventDocumentId) {
-      throw new Error('Evento é obrigatório para emitir um certificado');
-    }
-    if (identifier.length !== 11) {
-      throw new Error('CPF inválido: informe 11 dígitos');
-    }
+    const { eventDocumentId, identifier } = validateIssueInput(data);
 
     const existing = await findActiveCertificate(strapi, eventDocumentId, identifier);
     if (existing) {

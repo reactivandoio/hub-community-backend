@@ -23,6 +23,24 @@ export function generateCode(random: () => number = Math.random): string {
   return `${CODE_PREFIX}${body}`;
 }
 
+export function validateIssueInput(data: {
+  event?: any;
+  identifier?: string;
+}): { eventDocumentId: string; identifier: string } {
+  const eventDocumentId =
+    typeof data.event === 'string' ? data.event : data.event?.documentId;
+  const identifier = normalizeIdentifier(data.identifier);
+
+  if (!eventDocumentId) {
+    throw new Error('Evento é obrigatório para emitir um certificado');
+  }
+  if (identifier.length !== 11) {
+    throw new Error('CPF inválido: informe 11 dígitos');
+  }
+
+  return { eventDocumentId, identifier };
+}
+
 export async function findActiveCertificate(
   strapi: any,
   eventDocumentId: string,

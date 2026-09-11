@@ -6,6 +6,7 @@ import {
   generateCode,
   findActiveCertificate,
   allocateUniqueCode,
+  validateIssueInput,
 } from './certificate-helpers';
 
 const createMockStrapi = (findFirst = vi.fn()) => ({
@@ -39,6 +40,39 @@ describe('generateCode', () => {
   it('is deterministic given the random source', () => {
     const zero = () => 0;
     expect(generateCode(zero)).toBe('RCT-AAAAAAAA');
+  });
+});
+
+describe('validateIssueInput', () => {
+  it('resolves eventDocumentId and identifier when event is a string', () => {
+    const result = validateIssueInput({ event: 'ev1', identifier: '12345678909' });
+    expect(result).toEqual({ eventDocumentId: 'ev1', identifier: '12345678909' });
+  });
+
+  it('resolves eventDocumentId from an object and normalizes a masked CPF', () => {
+    const result = validateIssueInput({
+      event: { documentId: 'ev1' },
+      identifier: '123.456.789-09',
+    });
+    expect(result).toEqual({ eventDocumentId: 'ev1', identifier: '12345678909' });
+  });
+
+  it('throws the event error when event is missing', () => {
+    expect(() => validateIssueInput({ identifier: '12345678909' })).toThrow(
+      'Evento é obrigatório para emitir um certificado',
+    );
+  });
+
+  it('throws the CPF error for 10 digits', () => {
+    expect(() => validateIssueInput({ event: 'ev1', identifier: '1234567890' })).toThrow(
+      'CPF inválido: informe 11 dígitos',
+    );
+  });
+
+  it('throws the CPF error for a masked value that normalizes to fewer than 11 digits', () => {
+    expect(() => validateIssueInput({ event: 'ev1', identifier: '123.456.789' })).toThrow(
+      'CPF inválido: informe 11 dígitos',
+    );
   });
 });
 
