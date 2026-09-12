@@ -3,13 +3,18 @@ import type { Schema, Struct } from '@strapi/strapi';
 export interface CertificateSignature extends Struct.ComponentSchema {
   collectionName: 'components_certificate_signatures';
   info: {
-    description: 'Assinatura (nome, cargo e imagem opcional) no certificado';
+    description: 'Assinatura (nome, cargo e imagem ou texto cursivo opcional) no certificado';
     displayName: 'Signature';
   };
   attributes: {
+    font: Schema.Attribute.Enumeration<
+      ['great_vibes', 'allura', 'dancing_script']
+    > &
+      Schema.Attribute.DefaultTo<'great_vibes'>;
     image: Schema.Attribute.Media<'images'>;
     name: Schema.Attribute.String & Schema.Attribute.Required;
     role: Schema.Attribute.String;
+    text: Schema.Attribute.String;
   };
 }
 
