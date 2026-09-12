@@ -3,6 +3,7 @@ import {
   CODE_ALPHABET,
   CODE_PREFIX,
   normalizeIdentifier,
+  isEmailIdentifier,
   generateCode,
   findActiveCertificate,
   allocateUniqueCode,
@@ -21,6 +22,26 @@ describe('normalizeIdentifier', () => {
   it('handles empty and undefined', () => {
     expect(normalizeIdentifier('')).toBe('');
     expect(normalizeIdentifier(undefined as any)).toBe('');
+  });
+  it('trims and lower-cases an e-mail', () => {
+    expect(normalizeIdentifier(' Ana@Example.com ')).toBe('ana@example.com');
+  });
+  it('does not strip characters from an e-mail', () => {
+    expect(normalizeIdentifier('ana.silva+1@example.com')).toBe('ana.silva+1@example.com');
+  });
+});
+
+describe('isEmailIdentifier', () => {
+  it('accepts a normalized e-mail', () => {
+    expect(isEmailIdentifier('ana@example.com')).toBe(true);
+  });
+  it('rejects a CPF, empty and malformed values', () => {
+    expect(isEmailIdentifier('12345678909')).toBe(false);
+    expect(isEmailIdentifier('')).toBe(false);
+    expect(isEmailIdentifier(undefined as any)).toBe(false);
+    expect(isEmailIdentifier('ana@example')).toBe(false);
+    expect(isEmailIdentifier('ana @example.com')).toBe(false);
+    expect(isEmailIdentifier('@example.com')).toBe(false);
   });
 });
 
@@ -63,15 +84,32 @@ describe('validateIssueInput', () => {
     );
   });
 
-  it('throws the CPF error for 10 digits', () => {
+  it('accepts and normalizes an e-mail identifier', () => {
+    const result = validateIssueInput({ event: 'ev1', identifier: ' Ana@Example.com ' });
+    expect(result).toEqual({ eventDocumentId: 'ev1', identifier: 'ana@example.com' });
+  });
+
+  it('throws the identifier error for 10 digits', () => {
     expect(() => validateIssueInput({ event: 'ev1', identifier: '1234567890' })).toThrow(
-      'CPF inválido: informe 11 dígitos',
+      'Identificador inválido: informe um CPF com 11 dígitos ou um e-mail',
     );
   });
 
-  it('throws the CPF error for a masked value that normalizes to fewer than 11 digits', () => {
+  it('throws the identifier error for a masked value that normalizes to fewer than 11 digits', () => {
     expect(() => validateIssueInput({ event: 'ev1', identifier: '123.456.789' })).toThrow(
-      'CPF inválido: informe 11 dígitos',
+      'Identificador inválido: informe um CPF com 11 dígitos ou um e-mail',
+    );
+  });
+
+  it('throws the identifier error for an invalid e-mail', () => {
+    expect(() => validateIssueInput({ event: 'ev1', identifier: 'ana@example' })).toThrow(
+      'Identificador inválido: informe um CPF com 11 dígitos ou um e-mail',
+    );
+  });
+
+  it('throws the identifier error when identifier is missing', () => {
+    expect(() => validateIssueInput({ event: 'ev1' })).toThrow(
+      'Identificador inválido: informe um CPF com 11 dígitos ou um e-mail',
     );
   });
 });
@@ -94,6 +132,15 @@ describe('findActiveCertificate', () => {
   it('returns null when nothing found', async () => {
     const strapi = createMockStrapi(vi.fn().mockResolvedValue(null));
     expect(await findActiveCertificate(strapi, 'ev1', '1')).toBeNull();
+  });
+  it('queries by the normalized e-mail identifier', async () => {
+    const strapi = createMockStrapi(vi.fn().mockResolvedValue(null));
+    await findActiveCertificate(strapi, 'ev1', ' Ana@Example.com ');
+    expect(strapi.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filters: expect.objectContaining({ identifier: { $eq: 'ana@example.com' } }),
+      }),
+    );
   });
 });
 
