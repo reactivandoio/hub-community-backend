@@ -23,7 +23,7 @@
       "target": "plugin::users-permissions.user"
     },
     "name": { "type": "string", "required": true },
-    "identifier": { "type": "string", "required": true, "minLength": 11, "maxLength": 11 },
+    "identifier": { "type": "string", "required": true, "minLength": 5, "maxLength": 254 },
     "email": { "type": "email", "required": true },
     "source": {
       "type": "enumeration",

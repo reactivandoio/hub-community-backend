@@ -10,8 +10,22 @@ export const MAX_CODE_ATTEMPTS = 5;
 
 const CERTIFICATE_UID = 'api::certificate.certificate';
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Identifier = CPF (digits only) or, when there is no CPF, a normalized e-mail
+ * (trimmed, lower-case). The idempotency key is (event, identifier).
+ */
 export function normalizeIdentifier(value: string): string {
-  return (value || '').replace(/\D/g, '');
+  const raw = value || '';
+  if (raw.includes('@')) {
+    return raw.trim().toLowerCase();
+  }
+  return raw.replace(/\D/g, '');
+}
+
+export function isEmailIdentifier(value: string): boolean {
+  return EMAIL_PATTERN.test(value || '');
 }
 
 export function generateCode(random: () => number = Math.random): string {
@@ -34,8 +48,9 @@ export function validateIssueInput(data: {
   if (!eventDocumentId) {
     throw new Error('Evento é obrigatório para emitir um certificado');
   }
-  if (identifier.length !== 11) {
-    throw new Error('CPF inválido: informe 11 dígitos');
+  const isCpf = !identifier.includes('@') && identifier.length === 11;
+  if (!isCpf && !isEmailIdentifier(identifier)) {
+    throw new Error('Identificador inválido: informe um CPF com 11 dígitos ou um e-mail');
   }
 
   return { eventDocumentId, identifier };

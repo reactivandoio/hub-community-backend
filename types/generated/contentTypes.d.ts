@@ -563,8 +563,8 @@ export interface ApiCertificateCertificate extends Struct.CollectionTypeSchema {
     identifier: Schema.Attribute.String &
       Schema.Attribute.Required &
       Schema.Attribute.SetMinMaxLength<{
-        maxLength: 11;
-        minLength: 11;
+        maxLength: 254;
+        minLength: 5;
       }>;
     issued_at: Schema.Attribute.DateTime;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
