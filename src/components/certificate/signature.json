@@ -2,7 +2,7 @@
   "collectionName": "components_certificate_signatures",
   "info": {
     "displayName": "Signature",
-    "description": "Assinatura (nome, cargo e imagem opcional) no certificado"
+    "description": "Assinatura (nome, cargo e imagem ou texto cursivo opcional) no certificado"
   },
   "options": {},
   "attributes": {
@@ -13,6 +13,8 @@
       "multiple": false,
       "required": false,
       "allowedTypes": ["images"]
-    }
+    },
+    "text": { "type": "string" },
+    "font": { "type": "enumeration", "enum": ["great_vibes", "allura", "dancing_script"], "default": "great_vibes" }
   }
 }
