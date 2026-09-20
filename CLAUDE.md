@@ -90,6 +90,14 @@ async delete(documentId: string, params: any) {
 ```
 Entities WITHOUT soft delete: Agenda, Analytics-Event, Attendance, Certificate-Config, Comment, CommentReply, Event-Feedback, Link, Participant, Rate, Sw-Form, Tag, Team, Vote, Voting-Option, Voting-Session.
 
+### Unlisted Events
+`Event.unlisted` (boolean, default false) hides an event from the public listings while keeping its
+direct link working. This repo only stores the flag — the filtering lives in `hub-community-bff`
+(`resolvers/Event` excludes it from the `events` query unless `include_unlisted` is passed, and
+`resolvers/Community` drops it from `Community.events`). Rows written before the field existed hold
+NULL, which `unlisted = false` does not match in SQL, so
+`database/migrations/2026-09-20-backfill-event-unlisted.js` backfills them.
+
 ### Slug Generation
 Event and Community auto-generate unique slugs on `create()` and `update()` via `generateUniqueSlug()`:
 - Uses `slugify` with `{ lower: true, strict: true, trim: true }`

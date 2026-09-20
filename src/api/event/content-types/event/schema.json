@@ -118,6 +118,10 @@
       "relation": "oneToMany",
       "target": "api::certificate.certificate",
       "mappedBy": "event"
+    },
+    "unlisted": {
+      "type": "boolean",
+      "default": false
     }
   }
 }
