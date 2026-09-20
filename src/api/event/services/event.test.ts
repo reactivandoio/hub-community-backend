@@ -1,8 +1,14 @@
 /**
  * Tests for event service slug generation
+ *
+ * These drive `src/utils/slug.ts`, the module both the event and the community
+ * service use — the file used to carry its own copy of the logic, so it kept
+ * passing while the real behaviour drifted away from it.
  */
 
 import { describe, it, expect, vi } from 'vitest';
+
+import { MAX_SLUG_LENGTH, generateUniqueSlug } from '../../../utils/slug';
 
 // Mock Strapi instance
 const createMockStrapi = () => ({
@@ -11,61 +17,8 @@ const createMockStrapi = () => ({
 	}
 });
 
-// Import the slug generation logic (would need to export it separately in real implementation)
-const slugify = require('slugify');
-
-const MAX_SLUG_LENGTH = 100;
-
-async function generateUniqueSlug(
-	strapi: any,
-	title: string,
-	eventId?: string
-): Promise<string> {
-	if (!title || typeof title !== 'string') {
-		throw new Error('Title is required to generate slug');
-	}
-
-	let baseSlug = slugify(title, {
-		lower: true,
-		strict: true,
-		trim: true
-	});
-
-	if (baseSlug.length > MAX_SLUG_LENGTH) {
-		baseSlug = baseSlug.substring(0, MAX_SLUG_LENGTH);
-		baseSlug = baseSlug.replace(/-+$/, '');
-	}
-
-	let slug = baseSlug;
-	let counter = 2;
-
-	while (true) {
-		const filters: any = { slug: { $eq: slug } };
-
-		if (eventId) {
-			filters.documentId = { $ne: eventId };
-		}
-
-		const existingEvents = await strapi.entityService.findMany(
-			'api::event.event',
-			{
-				filters,
-				limit: 1
-			}
-		);
-
-		if (!existingEvents || existingEvents.length === 0) {
-			break;
-		}
-
-		const suffix = `-${counter}`;
-		const maxBaseLength = MAX_SLUG_LENGTH - suffix.length;
-		slug = `${baseSlug.substring(0, maxBaseLength)}${suffix}`;
-		counter++;
-	}
-
-	return slug;
-}
+const slugFor = (strapi: any, title: string, eventId?: string) =>
+	generateUniqueSlug(strapi, 'api::event.event', title, eventId);
 
 describe('Event Service - Slug Generation', () => {
 	describe('Special Characters', () => {
@@ -73,7 +26,7 @@ describe('Event Service - Slug Generation', () => {
 			const strapi = createMockStrapi();
 			strapi.entityService.findMany.mockResolvedValue([]);
 
-			const slug = await generateUniqueSlug(strapi, 'Café com Código');
+			const slug = await slugFor(strapi, 'Café com Código');
 			expect(slug).toBe('cafe-com-codigo');
 		});
 
@@ -81,7 +34,7 @@ describe('Event Service - Slug Generation', () => {
 			const strapi = createMockStrapi();
 			strapi.entityService.findMany.mockResolvedValue([]);
 
-			const slug = await generateUniqueSlug(strapi, 'Dev@Fest 2024 #Tech');
+			const slug = await slugFor(strapi, 'Dev@Fest 2024 #Tech');
 			expect(slug).toBe('devfest-2024-tech');
 		});
 
@@ -89,7 +42,7 @@ describe('Event Service - Slug Generation', () => {
 			const strapi = createMockStrapi();
 			strapi.entityService.findMany.mockResolvedValue([]);
 
-			const slug = await generateUniqueSlug(
+			const slug = await slugFor(
 				strapi,
 				'Workshop    Python   Advanced'
 			);
@@ -100,7 +53,7 @@ describe('Event Service - Slug Generation', () => {
 			const strapi = createMockStrapi();
 			strapi.entityService.findMany.mockResolvedValue([]);
 
-			const slug = await generateUniqueSlug(
+			const slug = await slugFor(
 				strapi,
 				'Conferência de Tecnologia™ & Inovação®'
 			);
@@ -115,12 +68,14 @@ describe('Event Service - Slug Generation', () => {
 
 			const longTitle =
 				'This is a very long event title that exceeds one hundred characters and should be truncated to fit within the maximum allowed length for slugs';
-			const slug = await generateUniqueSlug(strapi, longTitle);
+			const slug = await slugFor(strapi, longTitle);
 
-			expect(slug.length).toBeLessThanOrEqual(MAX_SLUG_LENGTH);
-			expect(slug).toBe(
-				'this-is-a-very-long-event-title-that-exceeds-one-hundred-characters-and-should-be-truncated-to'
+			// A hard cut at the limit, not at a word boundary.
+			expect(slug).toHaveLength(MAX_SLUG_LENGTH);
+			expect(slug).toMatch(
+				/^this-is-a-very-long-event-title-that-exceeds-one-hundred-characters/
 			);
+			expect(slug).not.toMatch(/-$/);
 		});
 
 		it('should remove trailing hyphen after truncation', async () => {
@@ -129,7 +84,7 @@ describe('Event Service - Slug Generation', () => {
 
 			// Title that would end with hyphen after truncation at 100 chars
 			const title = 'A'.repeat(95) + ' Test';
-			const slug = await generateUniqueSlug(strapi, title);
+			const slug = await slugFor(strapi, title);
 
 			expect(slug).not.toMatch(/-$/);
 			expect(slug.length).toBeLessThanOrEqual(MAX_SLUG_LENGTH);
@@ -146,7 +101,7 @@ describe('Event Service - Slug Generation', () => {
 				.mockResolvedValueOnce([{ id: '1', slug: 'devfest-2024' }])
 				.mockResolvedValueOnce([]);
 
-			const slug = await generateUniqueSlug(strapi, 'DevFest 2024');
+			const slug = await slugFor(strapi, 'DevFest 2024');
 			expect(slug).toBe('devfest-2024-2');
 		});
 
@@ -160,7 +115,7 @@ describe('Event Service - Slug Generation', () => {
 				.mockResolvedValueOnce([{ id: '3' }])
 				.mockResolvedValueOnce([]);
 
-			const slug = await generateUniqueSlug(strapi, 'Popular Event');
+			const slug = await slugFor(strapi, 'Popular Event');
 			expect(slug).toBe('popular-event-4');
 		});
 
@@ -169,7 +124,7 @@ describe('Event Service - Slug Generation', () => {
 			strapi.entityService.findMany.mockResolvedValue([]);
 
 			const eventId = 'current-event-id';
-			await generateUniqueSlug(strapi, 'Updated Title', eventId);
+			await slugFor(strapi, 'Updated Title', eventId);
 
 			expect(strapi.entityService.findMany).toHaveBeenCalledWith(
 				'api::event.event',
@@ -191,7 +146,7 @@ describe('Event Service - Slug Generation', () => {
 				.mockResolvedValueOnce([{ id: '1' }])
 				.mockResolvedValueOnce([]);
 
-			const slug = await generateUniqueSlug(strapi, longTitle);
+			const slug = await slugFor(strapi, longTitle);
 
 			// Should truncate base and add -2
 			expect(slug.length).toBeLessThanOrEqual(MAX_SLUG_LENGTH);
@@ -204,7 +159,7 @@ describe('Event Service - Slug Generation', () => {
 			const strapi = createMockStrapi();
 			strapi.entityService.findMany.mockResolvedValue([]);
 
-			await generateUniqueSlug(strapi, 'Test Event');
+			await slugFor(strapi, 'Test Event');
 
 			expect(strapi.entityService.findMany).toHaveBeenCalledWith(
 				'api::event.event',
@@ -219,7 +174,7 @@ describe('Event Service - Slug Generation', () => {
 			const strapi = createMockStrapi();
 			strapi.entityService.findMany.mockResolvedValue([]);
 
-			const slug = await generateUniqueSlug(strapi, 'Unique Event Name');
+			const slug = await slugFor(strapi, 'Unique Event Name');
 			expect(slug).toBe('unique-event-name');
 		});
 	});
@@ -228,7 +183,7 @@ describe('Event Service - Slug Generation', () => {
 		it('should throw error for empty title', async () => {
 			const strapi = createMockStrapi();
 
-			await expect(generateUniqueSlug(strapi, '')).rejects.toThrow(
+			await expect(slugFor(strapi, '')).rejects.toThrow(
 				'Title is required to generate slug'
 			);
 		});
@@ -236,7 +191,7 @@ describe('Event Service - Slug Generation', () => {
 		it('should throw error for null title', async () => {
 			const strapi = createMockStrapi();
 
-			await expect(generateUniqueSlug(strapi, null as any)).rejects.toThrow(
+			await expect(slugFor(strapi, null as any)).rejects.toThrow(
 				'Title is required to generate slug'
 			);
 		});
@@ -245,7 +200,7 @@ describe('Event Service - Slug Generation', () => {
 			const strapi = createMockStrapi();
 
 			await expect(
-				generateUniqueSlug(strapi, undefined as any)
+				slugFor(strapi, undefined as any)
 			).rejects.toThrow('Title is required to generate slug');
 		});
 
@@ -253,7 +208,7 @@ describe('Event Service - Slug Generation', () => {
 			const strapi = createMockStrapi();
 			strapi.entityService.findMany.mockResolvedValue([]);
 
-			const slug = await generateUniqueSlug(strapi, '@@@ ### $$$');
+			const slug = await slugFor(strapi, '@@@ ### $$$');
 
 			// slugify with strict mode should remove all special chars
 			// Result might be empty or have minimal content
@@ -264,7 +219,7 @@ describe('Event Service - Slug Generation', () => {
 			const strapi = createMockStrapi();
 			strapi.entityService.findMany.mockResolvedValue([]);
 
-			const slug = await generateUniqueSlug(strapi, '2024');
+			const slug = await slugFor(strapi, '2024');
 			expect(slug).toBe('2024');
 		});
 
@@ -272,7 +227,7 @@ describe('Event Service - Slug Generation', () => {
 			const strapi = createMockStrapi();
 			strapi.entityService.findMany.mockResolvedValue([]);
 
-			const slug = await generateUniqueSlug(strapi, 'CamelCaseEvent');
+			const slug = await slugFor(strapi, 'CamelCaseEvent');
 			expect(slug).toBe('camelcaseevent');
 		});
 	});
