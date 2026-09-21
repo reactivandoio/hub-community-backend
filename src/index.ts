@@ -69,6 +69,10 @@ export default {
         'api::vote.vote.create',
         // SW Form
         'api::sw-form.sw-form.create',
+        // Certificate request forms: the public link reads the form by slug and writes the
+        // request. Reading the requests back stays with the authenticated role.
+        'api::certificate-request-form.certificate-request-form.find',
+        'api::participant.participant.create',
         // Upload (public upload for cover images)
         'plugin::upload.content-api.upload',
         'plugin::upload.content-api.find',
@@ -135,6 +139,12 @@ export default {
         'api::participant.participant.find',
         'api::participant.participant.findOne',
         'api::participant.participant.create',
+        // Certificate request forms (full CRUD, admin surface)
+        'api::certificate-request-form.certificate-request-form.find',
+        'api::certificate-request-form.certificate-request-form.findOne',
+        'api::certificate-request-form.certificate-request-form.create',
+        'api::certificate-request-form.certificate-request-form.update',
+        'api::certificate-request-form.certificate-request-form.delete',
         // SW Form (read)
         'api::sw-form.sw-form.find',
         'api::sw-form.sw-form.findOne',

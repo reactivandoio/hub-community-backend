@@ -1,0 +1,36 @@
+{
+  "kind": "collectionType",
+  "collectionName": "certificate_request_forms",
+  "info": {
+    "singularName": "certificate-request-form",
+    "pluralName": "certificate-request-forms",
+    "displayName": "Certificate Request Form",
+    "description": "Formulário público de solicitação de certificado de um evento, por categoria (participante, organizador, mentor...)"
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {},
+  "attributes": {
+    "event": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::event.event",
+      "inversedBy": "certificate_request_forms"
+    },
+    "title": { "type": "string", "required": true },
+    "category": { "type": "string", "required": true, "default": "Participante" },
+    "slug": {
+      "type": "string",
+      "required": false,
+      "unique": true,
+      "regex": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "description": { "type": "text" },
+    "enabled": { "type": "boolean", "default": true },
+    "participants": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::participant.participant",
+      "mappedBy": "certificate_request_form"
+    }
+  }
+}

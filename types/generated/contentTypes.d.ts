@@ -540,6 +540,47 @@ export interface ApiCertificateConfigCertificateConfig
   };
 }
 
+export interface ApiCertificateRequestFormCertificateRequestForm
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'certificate_request_forms';
+  info: {
+    description: 'Formul\u00E1rio p\u00FAblico de solicita\u00E7\u00E3o de certificado de um evento, por categoria (participante, organizador, mentor...)';
+    displayName: 'Certificate Request Form';
+    pluralName: 'certificate-request-forms';
+    singularName: 'certificate-request-form';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    category: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'Participante'>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.Text;
+    enabled: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    event: Schema.Attribute.Relation<'manyToOne', 'api::event.event'>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::certificate-request-form.certificate-request-form'
+    > &
+      Schema.Attribute.Private;
+    participants: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::participant.participant'
+    >;
+    publishedAt: Schema.Attribute.DateTime;
+    slug: Schema.Attribute.String & Schema.Attribute.Unique;
+    title: Schema.Attribute.String & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiCertificateCertificate extends Struct.CollectionTypeSchema {
   collectionName: 'certificates';
   info: {
@@ -552,6 +593,8 @@ export interface ApiCertificateCertificate extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
+    category: Schema.Attribute.String &
+      Schema.Attribute.DefaultTo<'Participante'>;
     code: Schema.Attribute.String &
       Schema.Attribute.Required &
       Schema.Attribute.Unique;
@@ -924,6 +967,10 @@ export interface ApiEventEvent extends Struct.CollectionTypeSchema {
       'oneToOne',
       'api::certificate-config.certificate-config'
     >;
+    certificate_request_forms: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::certificate-request-form.certificate-request-form'
+    >;
     certificates: Schema.Attribute.Relation<
       'oneToMany',
       'api::certificate.certificate'
@@ -1050,7 +1097,7 @@ export interface ApiLocationLocation extends Struct.CollectionTypeSchema {
 export interface ApiParticipantParticipant extends Struct.CollectionTypeSchema {
   collectionName: 'participants';
   info: {
-    description: 'Collection for participants requesting a participation certificate';
+    description: 'Collection for participants requesting a participation certificate, by category';
     displayName: 'Participant';
     pluralName: 'participants';
     singularName: 'participant';
@@ -1059,6 +1106,12 @@ export interface ApiParticipantParticipant extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
+    category: Schema.Attribute.String &
+      Schema.Attribute.DefaultTo<'Participante'>;
+    certificate_request_form: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::certificate-request-form.certificate-request-form'
+    >;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -1957,6 +2010,7 @@ declare module '@strapi/strapi' {
       'api::analytics-event.analytics-event': ApiAnalyticsEventAnalyticsEvent;
       'api::attendance.attendance': ApiAttendanceAttendance;
       'api::certificate-config.certificate-config': ApiCertificateConfigCertificateConfig;
+      'api::certificate-request-form.certificate-request-form': ApiCertificateRequestFormCertificateRequestForm;
       'api::certificate.certificate': ApiCertificateCertificate;
       'api::comment-reply.comment-reply': ApiCommentReplyCommentReply;
       'api::comment.comment': ApiCommentComment;

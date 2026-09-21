@@ -113,6 +113,12 @@
       "target": "api::certificate-config.certificate-config",
       "mappedBy": "event"
     },
+    "certificate_request_forms": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::certificate-request-form.certificate-request-form",
+      "mappedBy": "event"
+    },
     "certificates": {
       "type": "relation",
       "relation": "oneToMany",
