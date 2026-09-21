@@ -30,6 +30,7 @@
       "enum": ["ATTENDANCE", "SELF_REQUEST", "ADMIN"],
       "required": true
     },
+    "category": { "type": "string", "default": "Participante" },
     "issued_at": { "type": "datetime" },
     "sent_at": { "type": "datetime" },
     "revoked_at": { "type": "datetime" }

@@ -5,7 +5,7 @@
     "singularName": "participant",
     "pluralName": "participants",
     "displayName": "Participant",
-    "description": "Collection for participants requesting a participation certificate"
+    "description": "Collection for participants requesting a participation certificate, by category"
   },
   "options": {
     "draftAndPublish": false
@@ -32,6 +32,16 @@
       "type": "relation",
       "relation": "manyToOne",
       "target": "api::event.event",
+      "inversedBy": "participants"
+    },
+    "category": {
+      "type": "string",
+      "default": "Participante"
+    },
+    "certificate_request_form": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::certificate-request-form.certificate-request-form",
       "inversedBy": "participants"
     }
   }

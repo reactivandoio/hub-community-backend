@@ -3,6 +3,8 @@
  * without booting Strapi.
  */
 
+import { categoryFilter, normalizeCategory } from '../../../utils/certificate-category';
+
 export const CODE_PREFIX = 'RCT-';
 export const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const CODE_LENGTH = 8;
@@ -14,7 +16,8 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Identifier = CPF (digits only) or, when there is no CPF, a normalized e-mail
- * (trimmed, lower-case). The idempotency key is (event, identifier).
+ * (trimmed, lower-case). The idempotency key is (event, identifier, category), so the
+ * same person can hold one certificate as participante and another as mentor.
  */
 export function normalizeIdentifier(value: string): string {
   const raw = value || '';
@@ -40,10 +43,12 @@ export function generateCode(random: () => number = Math.random): string {
 export function validateIssueInput(data: {
   event?: any;
   identifier?: string;
-}): { eventDocumentId: string; identifier: string } {
+  category?: string;
+}): { eventDocumentId: string; identifier: string; category: string } {
   const eventDocumentId =
     typeof data.event === 'string' ? data.event : data.event?.documentId;
   const identifier = normalizeIdentifier(data.identifier);
+  const category = normalizeCategory(data.category);
 
   if (!eventDocumentId) {
     throw new Error('Evento é obrigatório para emitir um certificado');
@@ -53,19 +58,21 @@ export function validateIssueInput(data: {
     throw new Error('Identificador inválido: informe um CPF com 11 dígitos ou um e-mail');
   }
 
-  return { eventDocumentId, identifier };
+  return { eventDocumentId, identifier, category };
 }
 
 export async function findActiveCertificate(
   strapi: any,
   eventDocumentId: string,
   identifier: string,
+  category?: string,
 ): Promise<any | null> {
   const existing = await strapi.documents(CERTIFICATE_UID).findFirst({
     filters: {
       event: { documentId: { $eq: eventDocumentId } },
       identifier: { $eq: normalizeIdentifier(identifier) },
       revoked_at: { $null: true },
+      ...categoryFilter(category),
     },
     populate: ['event'],
   });

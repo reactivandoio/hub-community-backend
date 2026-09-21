@@ -38,6 +38,7 @@ src/
     attendance/         # Lista de presença (user × event)
     certificate/        # Issued participation certificates (unique code, idempotent per event+CPF)
     certificate-config/ # Per-event certificate template (sponsors, signatures, text)
+    certificate-request-form/ # Public per-category certificate request form of an event
     comment/        # Comments on events/talks/communities
     comment-reply/  # Threaded comment replies
     community/      # Communities with organizers, tags, events
@@ -45,7 +46,7 @@ src/
     event-feedback/     # Post-event NPS survey
     link/           # Social media links
     location/       # Geographic locations (lat/lng)
-    participant/        # Legacy certificate requests (kept for data; new flow uses certificate)
+    participant/        # Certificate requests filled in on a certificate-request-form, by category
     rate/           # Ratings (1-5) on talks/events
     speaker/        # Talk speakers with bio, avatar, links
     sw-form/            # Startup Weekend volunteer form
@@ -107,7 +108,18 @@ Event and Community auto-generate unique slugs on `create()` and `update()` via 
 - Throws `Error("Title is required to generate slug")` if title is missing
 
 ### Certificate issuing
-`api::certificate` `create()` is idempotent per `(event, identifier)`: it returns the existing non-revoked certificate instead of creating a duplicate. Input validation via `validateIssueInput` (event required, 11-digit CPF). `code` is `RCT-` + 8 chars from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`, allocated with collision retry (max 5). Pure logic lives in `services/certificate-helpers.ts` (tested). Components: `certificate.sponsor`, `certificate.signature`.
+`api::certificate` `create()` is idempotent per `(event, identifier, category)`: it returns the existing non-revoked certificate of that category instead of creating a duplicate, so the same person can hold one certificate as participante and another as mentor. Input validation via `validateIssueInput` (event required, 11-digit CPF). `code` is `RCT-` + 8 chars from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`, allocated with collision retry (max 5). Pure logic lives in `services/certificate-helpers.ts` (tested). Components: `certificate.sponsor`, `certificate.signature`.
+
+### Certificate categories
+`Certificate.category`, `Participant.category` and `CertificateRequestForm.category` hold the label
+the organizer typed ("Participante" — the default — "Organizador", "Mentor"…). Comparisons never use
+the raw string: `src/utils/certificate-category.ts` normalizes it (`normalizeCategory`), builds an
+accent- and case-insensitive key (`categoryKey`) and produces the Strapi filter (`categoryFilter`),
+where the default category also matches the `NULL` left by every row written before the field
+existed — so no backfill migration is needed. A `certificate-request-form` is the public link
+(`/certificado/solicitar/<slug>`) for one category of one event; its `slug` is generated from the
+event and the category by the service and is never regenerated on update, so a shared link keeps
+working when the title or category is edited.
 
 ### Schema Validation
 All validation is declarative in `schema.json` files — not in code. Patterns include:

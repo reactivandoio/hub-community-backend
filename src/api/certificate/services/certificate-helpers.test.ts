@@ -67,7 +67,11 @@ describe('generateCode', () => {
 describe('validateIssueInput', () => {
   it('resolves eventDocumentId and identifier when event is a string', () => {
     const result = validateIssueInput({ event: 'ev1', identifier: '12345678909' });
-    expect(result).toEqual({ eventDocumentId: 'ev1', identifier: '12345678909' });
+    expect(result).toEqual({
+      eventDocumentId: 'ev1',
+      identifier: '12345678909',
+      category: 'Participante',
+    });
   });
 
   it('resolves eventDocumentId from an object and normalizes a masked CPF', () => {
@@ -75,7 +79,11 @@ describe('validateIssueInput', () => {
       event: { documentId: 'ev1' },
       identifier: '123.456.789-09',
     });
-    expect(result).toEqual({ eventDocumentId: 'ev1', identifier: '12345678909' });
+    expect(result).toEqual({
+      eventDocumentId: 'ev1',
+      identifier: '12345678909',
+      category: 'Participante',
+    });
   });
 
   it('throws the event error when event is missing', () => {
@@ -86,7 +94,20 @@ describe('validateIssueInput', () => {
 
   it('accepts and normalizes an e-mail identifier', () => {
     const result = validateIssueInput({ event: 'ev1', identifier: ' Ana@Example.com ' });
-    expect(result).toEqual({ eventDocumentId: 'ev1', identifier: 'ana@example.com' });
+    expect(result).toEqual({
+      eventDocumentId: 'ev1',
+      identifier: 'ana@example.com',
+      category: 'Participante',
+    });
+  });
+
+  it('keeps the category that was asked for, trimmed', () => {
+    const result = validateIssueInput({
+      event: 'ev1',
+      identifier: '12345678909',
+      category: ' Mentor ',
+    });
+    expect(result.category).toBe('Mentor');
   });
 
   it('throws the identifier error for 10 digits', () => {
@@ -125,9 +146,19 @@ describe('findActiveCertificate', () => {
         event: { documentId: { $eq: 'ev1' } },
         identifier: { $eq: '12345678909' },
         revoked_at: { $null: true },
+        $or: [{ category: { $null: true } }, { category: { $eqi: 'Participante' } }],
       },
       populate: ['event'],
     });
+  });
+  it('scopes the lookup to the category asked for, so a mentor certificate is not reused', async () => {
+    const strapi = createMockStrapi(vi.fn().mockResolvedValue(null));
+    await findActiveCertificate(strapi, 'ev1', '12345678909', 'Mentor');
+    expect(strapi.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filters: expect.objectContaining({ category: { $eqi: 'Mentor' } }),
+      }),
+    );
   });
   it('returns null when nothing found', async () => {
     const strapi = createMockStrapi(vi.fn().mockResolvedValue(null));
