@@ -1115,6 +1115,7 @@ export interface ApiParticipantParticipant extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    date_of_birth: Schema.Attribute.Date;
     email: Schema.Attribute.Email & Schema.Attribute.Required;
     event: Schema.Attribute.Relation<'manyToOne', 'api::event.event'>;
     identifier: Schema.Attribute.String & Schema.Attribute.Required;

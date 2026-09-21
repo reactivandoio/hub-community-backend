@@ -28,6 +28,9 @@
       "type": "string",
       "required": true
     },
+    "date_of_birth": {
+      "type": "date"
+    },
     "event": {
       "type": "relation",
       "relation": "manyToOne",
