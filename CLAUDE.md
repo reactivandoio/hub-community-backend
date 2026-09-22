@@ -20,7 +20,7 @@ Strapi 5.23.5 headless CMS backend for a community hub platform. Manages events,
 | `yarn develop` | Start dev server with hot reload (port 1337) |
 | `yarn build` | Build admin panel for production |
 | `yarn start` | Start production server |
-| `yarn vitest` | Run tests |
+| `yarn test` / `yarn vitest` | Run tests (once / watch) |
 | `make start` | Start with PM2 |
 | `make refresh` | Pull + install + restart (PM2) |
 | `make update` | Pull + install + build + restart (PM2) |
@@ -33,6 +33,7 @@ database/migrations # Database migration scripts
 public/             # Static assets
 src/
   api/              # API modules (22 entities)
+    account-setup/      # POST /api/account-setup — bff-only (API token), no content type
     agenda/         # User event agendas
     analytics-event/    # Tracking events
     attendance/         # Lista de presença (user × event)
@@ -120,6 +121,16 @@ existed — so no backfill migration is needed. A `certificate-request-form` is 
 (`/certificado/solicitar/<slug>`) for one category of one event; its `slug` is generated from the
 event and the category by the service and is never regenerated on update, so a shared link keeps
 working when the title or category is edited.
+
+### Account setup (signup without password)
+`POST /api/account-setup` (`{ email, name?, phone? }` → `{ created, token }`) is called only by the bff
+with the integration API token: the route has no `auth` config, so its derived scope
+`api::account-setup.account-setup.setup` is granted to no role (anonymous/JWT → 401/403, full-access
+API token → allowed). It creates the account when missing (random password, `confirmed: true`,
+`password_pending: true`) and, while `password_pending` is true, writes a fresh `resetPasswordToken`
+and returns it for the bff's "Crie sua senha" link. `register()` in `src/index.ts` wraps
+`auth.resetPassword` to set `password_pending: false` after a successful reset. Pure logic lives in
+`services/account-setup-helpers.ts` (tested).
 
 ### Schema Validation
 All validation is declarative in `schema.json` files — not in code. Patterns include:
