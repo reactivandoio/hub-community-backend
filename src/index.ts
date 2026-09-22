@@ -1,7 +1,9 @@
 // import type { Core } from '@strapi/strapi';
 
+import { wrapResetPassword } from './api/account-setup/services/account-setup-helpers';
+
 export default {
-  // register() is defined below with email-confirmation override
+  // register() is defined below with email-confirmation and reset-password overrides
 
   /**
    * An asynchronous bootstrap function that runs before
@@ -264,6 +266,21 @@ export default {
         throw err;
       }
     };
+
+    // Override reset-password so creating the first password (link from the signup e-mail)
+    // clears password_pending — see api/account-setup
+    originalController.resetPassword = wrapResetPassword(originalController.resetPassword, {
+      findUserIdByResetCode: async (code) => {
+        const user = await strapi.db
+          .query("plugin::users-permissions.user")
+          .findOne({ where: { resetPasswordToken: code }, select: ["id"] });
+        return user?.id ?? null;
+      },
+      clearPasswordPending: (id) =>
+        strapi.db
+          .query("plugin::users-permissions.user")
+          .update({ where: { id }, data: { password_pending: false } }),
+    });
   },
 };
 

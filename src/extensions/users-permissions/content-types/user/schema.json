@@ -129,6 +129,11 @@
     "date_of_birth": {
       "type": "date",
       "required": false
+    },
+    "password_pending": {
+      "type": "boolean",
+      "default": false,
+      "private": true
     }
   }
 }
