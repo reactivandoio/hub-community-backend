@@ -1,6 +1,12 @@
 // import type { Core } from '@strapi/strapi';
 
 import { wrapResetPassword } from './api/account-setup/services/account-setup-helpers';
+import {
+  ADMIN_ROLE,
+  VOTING_WRITE_ACTIONS,
+  ensureRole,
+  revokePermissions,
+} from './utils/roles';
 
 export default {
   // register() is defined below with email-confirmation and reset-password overrides
@@ -82,7 +88,7 @@ export default {
       ]);
 
       // ── Authenticated role permissions ──
-      await grantPermissions('authenticated', [
+      const authenticatedActions = [
         // Events (full CRUD)
         'api::event.event.find',
         'api::event.event.findOne',
@@ -163,7 +169,35 @@ export default {
         'api::voting-option.voting-option.find',
         'api::voting-option.voting-option.findOne',
         'api::vote.vote.create',
-      ]);
+      ];
+      await grantPermissions('authenticated', authenticatedActions);
+
+      // ── Admin role ──
+      // Source of truth for platform admins, read by the BFF. Same content-api
+      // permissions as authenticated: see src/utils/roles.ts.
+      await ensureRole(
+        strapi.db.query('plugin::users-permissions.role'),
+        ADMIN_ROLE,
+        strapi.log,
+      );
+      await grantPermissions(ADMIN_ROLE.type, authenticatedActions);
+
+      // ── Revocations ──
+      // Voting sessions and options are written only by the BFF (requireAdmin) with the
+      // integration token; a public or authenticated grant made in the panel is removed.
+      for (const roleType of ['public', 'authenticated', ADMIN_ROLE.type]) {
+        const role = await strapi.db.query('plugin::users-permissions.role').findOne({
+          where: { type: roleType },
+        });
+        if (role) {
+          await revokePermissions(
+            strapi.db.query('plugin::users-permissions.permission'),
+            role.id,
+            VOTING_WRITE_ACTIONS,
+            strapi.log,
+          );
+        }
+      }
     } catch (err) {
       strapi.log.error('Failed to bootstrap permissions: ' + err.message);
     }
