@@ -142,6 +142,12 @@ All validation is declarative in `schema.json` files — not in code. Patterns i
 ### Bootstrap
 `src/index.ts` configures password reset email on startup. Sets reset URL to `${PUBLIC_URL}/admin/auth/reset-password` and stores it in the users-permissions plugin store.
 
+It also grants the content-api permissions of the `public` and `authenticated` roles (idempotent)
+and creates the users-permissions role `admin` (`src/utils/roles.ts`, tested) with the same
+permissions as `authenticated`. That role is the source of truth for platform admins: the bff reads
+it (`GET /users/:id?populate=role` with the integration token) to authorize administrative
+operations. Assign it to a user in the admin panel (Content Manager > User > role).
+
 ## Entity Relationships
 
 ### Event
