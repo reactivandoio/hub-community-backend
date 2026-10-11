@@ -1,0 +1,37 @@
+name: CI
+
+# Roda em runner do GitHub (nunca no thor): instala, testes e build (o repositório não tem lint configurado).
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - name: Instalar dependências
+        run: yarn install --frozen-lockfile --network-timeout 600000
+
+      - name: Testes
+        run: yarn test
+
+      - name: Testes dos scripts de deploy
+        run: bash .github/scripts/env-scripts.test.sh
+
+      # Strapi 4 em produção usa NODE_ENV=production no build do admin.
+      - name: Build
+        run: yarn build
+        env:
+          NODE_ENV: production
