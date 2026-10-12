@@ -1004,6 +1004,7 @@ export interface ApiEventEvent extends Struct.CollectionTypeSchema {
     talks: Schema.Attribute.Relation<'oneToMany', 'api::talk.talk'>;
     teams: Schema.Attribute.Relation<'oneToMany', 'api::team.team'>;
     title: Schema.Attribute.String;
+    unlisted: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -1171,6 +1172,46 @@ export interface ApiRateRate extends Struct.CollectionTypeSchema {
         },
         number
       >;
+  };
+}
+
+export interface ApiRoleChangeRoleChange extends Struct.CollectionTypeSchema {
+  collectionName: 'role_changes';
+  info: {
+    description: 'Audit trail of users-permissions role changes made from the Hub admin (written by the bff only)';
+    displayName: 'Role Change';
+    pluralName: 'role-changes';
+    singularName: 'role-change';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    actor: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    actor_email: Schema.Attribute.String;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    from_role: Schema.Attribute.String;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::role-change.role-change'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    target: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    target_email: Schema.Attribute.String;
+    to_role: Schema.Attribute.String & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
   };
 }
 
@@ -1973,6 +2014,9 @@ export interface PluginUsersPermissionsUser
       Schema.Attribute.SetMinMaxLength<{
         minLength: 6;
       }>;
+    password_pending: Schema.Attribute.Boolean &
+      Schema.Attribute.Private &
+      Schema.Attribute.DefaultTo<false>;
     phone: Schema.Attribute.String;
     provider: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;
@@ -2022,6 +2066,7 @@ declare module '@strapi/strapi' {
       'api::location.location': ApiLocationLocation;
       'api::participant.participant': ApiParticipantParticipant;
       'api::rate.rate': ApiRateRate;
+      'api::role-change.role-change': ApiRoleChangeRoleChange;
       'api::speaker.speaker': ApiSpeakerSpeaker;
       'api::sw-form.sw-form': ApiSwFormSwForm;
       'api::tag.tag': ApiTagTag;
