@@ -115,3 +115,40 @@ export function wrapResetPassword(
     return result;
   };
 }
+
+// REA-22: at most this many e-mails per account-status call (the bff asks for one or a page).
+export const ACCOUNT_STATUS_MAX_EMAILS = 100;
+
+export type AccountStatus = { email: string; pending: boolean };
+
+/**
+ * Whether each e-mail's account still has no password of its own (`password_pending`, which
+ * stays private on the user). E-mails without an account are left out; invalid ones are
+ * ignored. "Cadastro concluído" = the person created the password.
+ */
+export async function accountStatuses(
+  rawEmails: unknown,
+  findUsersByEmails: (emails: string[]) => Promise<Array<{ email: string; password_pending?: boolean | null }>>,
+): Promise<AccountStatus[]> {
+  const list = Array.isArray(rawEmails) ? rawEmails : [];
+  const emails = [
+    ...new Set(
+      list
+        .map((value) => {
+          try {
+            return normalizeEmail(value as string);
+          } catch {
+            return null;
+          }
+        })
+        .filter((email): email is string => Boolean(email)),
+    ),
+  ].slice(0, ACCOUNT_STATUS_MAX_EMAILS);
+  if (emails.length === 0) return [];
+
+  const users = await findUsersByEmails(emails);
+  return users.map((user) => ({
+    email: String(user.email || '').trim().toLowerCase(),
+    pending: user.password_pending === true,
+  }));
+}

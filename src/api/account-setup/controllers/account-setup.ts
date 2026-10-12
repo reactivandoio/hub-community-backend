@@ -20,4 +20,11 @@ export default {
       throw err;
     }
   },
+
+  // REA-22: { accounts: [{ email, pending }] } for the e-mails that have an account. The
+  // certificate needs a finished registration (password created).
+  async status(ctx: any) {
+    const { emails } = ctx.request.body || {};
+    ctx.body = { accounts: await strapi.service('api::account-setup.account-setup').status(emails) };
+  },
 };

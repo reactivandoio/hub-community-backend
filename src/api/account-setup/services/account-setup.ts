@@ -7,7 +7,7 @@
 
 import crypto from 'crypto';
 
-import { setupAccount, SetupAccountInput } from './account-setup-helpers';
+import { accountStatuses, setupAccount, SetupAccountInput } from './account-setup-helpers';
 
 const USER_UID = 'plugin::users-permissions.user';
 
@@ -29,5 +29,14 @@ export default ({ strapi }: { strapi: any }) => ({
       updateUser: (id, data) => userService.edit(id, data),
       randomHex: (bytes) => crypto.randomBytes(bytes).toString('hex'),
     });
+  },
+
+  async status(emails: unknown) {
+    return accountStatuses(emails, (list) =>
+      strapi.db.query(USER_UID).findMany({
+        where: { $or: list.map((email) => ({ email: { $eqi: email } })) },
+        select: ['email', 'password_pending'],
+      }),
+    );
   },
 });

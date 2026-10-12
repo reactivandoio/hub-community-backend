@@ -14,5 +14,12 @@ export default {
       handler: 'account-setup.setup',
       config: {},
     },
+    {
+      // REA-22: same rule — only the bff's API token reaches it.
+      method: 'POST',
+      path: '/account-status',
+      handler: 'account-setup.status',
+      config: {},
+    },
   ],
 };
