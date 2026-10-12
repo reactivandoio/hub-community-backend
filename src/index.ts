@@ -1,6 +1,7 @@
 // import type { Core } from '@strapi/strapi';
 
 import { wrapResetPassword } from './api/account-setup/services/account-setup-helpers';
+import { ensureRoles } from './roles/ensure-roles';
 
 export default {
   // register() is defined below with email-confirmation and reset-password overrides
@@ -13,160 +14,16 @@ export default {
    * run jobs, or perform some special logic.
    */
   async bootstrap({ strapi }: { strapi: any }) {
-    // Helper: grant permissions to a role (idempotent)
-    const grantPermissions = async (roleType: string, actions: string[]) => {
-      const role = await strapi.db.query('plugin::users-permissions.role').findOne({
-        where: { type: roleType },
-      });
-
-      if (!role) {
-        strapi.log.warn(`Role "${roleType}" not found, skipping permissions`);
-        return;
-      }
-
-      for (const action of actions) {
-        const existing = await strapi.db.query('plugin::users-permissions.permission').findOne({
-          where: { role: role.id, action },
-        });
-
-        if (!existing) {
-          await strapi.db.query('plugin::users-permissions.permission').create({
-            data: { role: role.id, action },
-          });
-          strapi.log.info(`Granted ${roleType} permission: ${action}`);
-        }
-      }
-    };
-
+    // Roles and their content-API permissions (src/roles). With ROLES_DRY_RUN=true
+    // (yarn roles:check) it only logs the plan and the rest of the bootstrap is skipped.
+    const rolesDryRun = process.env.ROLES_DRY_RUN === 'true';
     try {
-      // ── Public role permissions ──
-      await grantPermissions('public', [
-        // Events (read)
-        'api::event.event.find',
-        'api::event.event.findOne',
-        // Communities (read)
-        'api::community.community.find',
-        'api::community.community.findOne',
-        // Talks (read)
-        'api::talk.talk.find',
-        'api::talk.talk.findOne',
-        // Speakers (read)
-        'api::speaker.speaker.find',
-        'api::speaker.speaker.findOne',
-        // Locations (read)
-        'api::location.location.find',
-        'api::location.location.findOne',
-        // Tags (read)
-        'api::tag.tag.find',
-        'api::tag.tag.findOne',
-        // Teams (read)
-        'api::team.team.find',
-        'api::team.team.findOne',
-        // Voting
-        'api::voting-session.voting-session.find',
-        'api::voting-session.voting-session.findOne',
-        'api::voting-session.voting-session.getResults',
-        'api::voting-option.voting-option.find',
-        'api::voting-option.voting-option.findOne',
-        'api::vote.vote.create',
-        // SW Form
-        'api::sw-form.sw-form.create',
-        // Certificate request forms: the public link reads the form by slug and writes the
-        // request. Reading the requests back stays with the authenticated role.
-        'api::certificate-request-form.certificate-request-form.find',
-        'api::participant.participant.create',
-        // Upload (public upload for cover images)
-        'plugin::upload.content-api.upload',
-        'plugin::upload.content-api.find',
-        'plugin::upload.content-api.findOne',
-      ]);
-
-      // ── Authenticated role permissions ──
-      await grantPermissions('authenticated', [
-        // Events (full CRUD)
-        'api::event.event.find',
-        'api::event.event.findOne',
-        'api::event.event.create',
-        'api::event.event.update',
-        'api::event.event.delete',
-        // Communities (full CRUD)
-        'api::community.community.find',
-        'api::community.community.findOne',
-        'api::community.community.create',
-        'api::community.community.update',
-        'api::community.community.delete',
-        // Talks (full CRUD)
-        'api::talk.talk.find',
-        'api::talk.talk.findOne',
-        'api::talk.talk.create',
-        'api::talk.talk.update',
-        'api::talk.talk.delete',
-        // Speakers (full CRUD)
-        'api::speaker.speaker.find',
-        'api::speaker.speaker.findOne',
-        'api::speaker.speaker.create',
-        'api::speaker.speaker.update',
-        'api::speaker.speaker.delete',
-        // Locations (full CRUD)
-        'api::location.location.find',
-        'api::location.location.findOne',
-        'api::location.location.create',
-        'api::location.location.update',
-        'api::location.location.delete',
-        // Tags (read + create)
-        'api::tag.tag.find',
-        'api::tag.tag.findOne',
-        'api::tag.tag.create',
-        // Teams (full CRUD + custom actions)
-        'api::team.team.find',
-        'api::team.team.findOne',
-        'api::team.team.create',
-        'api::team.team.update',
-        'api::team.team.delete',
-        'api::team.team.changeLead',
-        'api::team.team.leaveTeam',
-        // Agendas (full CRUD)
-        'api::agenda.agenda.find',
-        'api::agenda.agenda.findOne',
-        'api::agenda.agenda.create',
-        'api::agenda.agenda.update',
-        'api::agenda.agenda.delete',
-        // Comments (full CRUD)
-        'api::comment.comment.find',
-        'api::comment.comment.findOne',
-        'api::comment.comment.create',
-        'api::comment.comment.update',
-        'api::comment.comment.delete',
-        // Participants (read + create)
-        'api::participant.participant.find',
-        'api::participant.participant.findOne',
-        'api::participant.participant.create',
-        // Certificate request forms (full CRUD, admin surface)
-        'api::certificate-request-form.certificate-request-form.find',
-        'api::certificate-request-form.certificate-request-form.findOne',
-        'api::certificate-request-form.certificate-request-form.create',
-        'api::certificate-request-form.certificate-request-form.update',
-        'api::certificate-request-form.certificate-request-form.delete',
-        // SW Form (read)
-        'api::sw-form.sw-form.find',
-        'api::sw-form.sw-form.findOne',
-        // Upload (authenticated upload for cover images)
-        'plugin::upload.content-api.upload',
-        'plugin::upload.content-api.find',
-        'plugin::upload.content-api.findOne',
-        // Users (read own profile + update)
-        'plugin::users-permissions.user.me',
-        'plugin::users-permissions.user.update',
-        // Voting
-        'api::voting-session.voting-session.find',
-        'api::voting-session.voting-session.findOne',
-        'api::voting-option.voting-option.find',
-        'api::voting-option.voting-option.findOne',
-        'api::vote.vote.create',
-      ]);
+      await ensureRoles(strapi, { dryRun: rolesDryRun });
     } catch (err) {
       strapi.log.error('Failed to bootstrap permissions: ' + err.message);
+      if (rolesDryRun) throw err;
     }
+    if (rolesDryRun) return;
 
     // Add indexes for Performance Considerations (session_id, option_id, fingerprint)
     try {
