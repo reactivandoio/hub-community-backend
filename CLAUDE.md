@@ -24,6 +24,7 @@ Strapi 5.23.5 headless CMS backend for a community hub platform. Manages events,
 | `make start` | Start with PM2 |
 | `make refresh` | Pull + install + restart (PM2) |
 | `make update` | Pull + install + build + restart (PM2) |
+| `yarn roles:check` | Dry run: logs the roles/permissions the next start would add, writes nothing |
 
 ## Project Structure
 
@@ -49,6 +50,7 @@ src/
     location/       # Geographic locations (lat/lng)
     participant/        # Certificate requests filled in on a certificate-request-form, by category
     rate/           # Ratings (1-5) on talks/events
+    role-change/        # Audit trail of role changes made from the Hub admin (written by the bff only)
     speaker/        # Talk speakers with bio, avatar, links
     sw-form/            # Startup Weekend volunteer form
     tag/            # Tags for events and communities
@@ -59,6 +61,7 @@ src/
     voting-session/  # Public voting sessions
   extensions/
     users-permissions/  # Custom user auth schema extensions
+  roles/            # users-permissions roles + permissions, applied on every start (ensureRoles)
 types/              # TypeScript type definitions
 ```
 
@@ -138,6 +141,31 @@ All validation is declarative in `schema.json` files — not in code. Patterns i
 - `regex` for slug format: `^[a-z0-9]+(?:-[a-z0-9]+)*$`
 - `enum` for link types: WEB, LINKEDIN, GITHUB, INSTAGRAM, WHATSAPP, TELEGRAM, OTHER
 - All content types have `draftAndPublish: false`
+
+### Roles and permissions
+`src/roles/definitions.ts` lists the users-permissions roles and their content-API actions:
+`public`, `authenticated` (every user, the default), `community-manager` and `admin`. Both new roles
+hold every `authenticated` action — the list plus whatever that role has in the database, e.g. the
+plugin's `auth.changePassword` — because a user has one role and must not lose anything by moving.
+What admin and community-manager may do in the Hub admin is decided in `hub-community-bff`
+(`utils/auth`, by `role.type`), which works with the integration token.
+`ensureRoles` (`src/roles/ensure-roles.ts`, plan logic tested) runs first in `bootstrap()`: it creates
+missing roles (matched by `type`, so a role created by hand in the Strapi admin is reused) and grants
+missing actions. It only adds: it never deletes a role or permission and never changes a user's role
+— the first admin is assigned by hand (Content Manager → User → Role). `yarn roles:check` loads the
+app with `ROLES_DRY_RUN=true`, which logs the plan and skips the rest of the bootstrap (loading Strapi
+still syncs the schema, as any start does).
+After `ensureRoles`, `applyInitialAssignments` (`src/roles/initial-assignments.ts`, plan logic tested)
+promotes to `admin` the users whose e-mail is in `INITIAL_ADMIN_EMAILS`, and to `community-manager`
+the users in `community.organizers` (non-deleted communities) still on `authenticated`. Each runs once —
+applied e-mails and the organizers step are remembered in the plugin store `hub-roles` — so a role
+changed later in the Hub admin is not undone by a restart; it never creates accounts nor demotes, and
+each change is written to `role-change` with actor "migration". Logs mask e-mails.
+`api::role-change` is granted to no role; only the bff (full-access API token) writes and reads it.
+`PUT /api/users/:id` (users-permissions `user.update`, granted to `authenticated`) has no ownership
+check in the plugin; `register()` wraps it with `roles/user-update-guard`: with a user JWT only the
+user's own record, and never `role`, `blocked`, `confirmed`, `provider`, tokens or `password_pending`.
+API-token requests (the bff) are unchanged.
 
 ### Bootstrap
 `src/index.ts` configures password reset email on startup. Sets reset URL to `${PUBLIC_URL}/admin/auth/reset-password` and stores it in the users-permissions plugin store.

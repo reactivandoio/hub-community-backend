@@ -9,7 +9,8 @@
     "develop": "strapi develop",
     "start": "strapi start",
     "strapi": "strapi",
-    "test": "vitest run"
+    "test": "vitest run",
+    "roles:check": "node scripts/roles-check.js"
   },
   "dependencies": {
     "@strapi/plugin-cloud": "5.23.5",

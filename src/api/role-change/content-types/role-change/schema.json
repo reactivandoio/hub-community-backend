@@ -1,0 +1,39 @@
+{
+  "kind": "collectionType",
+  "collectionName": "role_changes",
+  "info": {
+    "singularName": "role-change",
+    "pluralName": "role-changes",
+    "displayName": "Role Change",
+    "description": "Audit trail of users-permissions role changes made from the Hub admin (written by the bff only)"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "actor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "actor_email": {
+      "type": "string"
+    },
+    "target": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "target_email": {
+      "type": "string"
+    },
+    "from_role": {
+      "type": "string"
+    },
+    "to_role": {
+      "type": "string",
+      "required": true
+    }
+  }
+}
