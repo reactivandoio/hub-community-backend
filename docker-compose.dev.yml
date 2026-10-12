@@ -1,0 +1,66 @@
+# Ambiente de desenvolvimento do Strapi do Hub (REA-21), com MySQL. Use pelo Makefile:
+# make dev, make test, make build. Configuração no .env.dev; veja .env.dev.example.
+name: hub-backend-dev
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        NODE_VERSION: ${BACKEND_NODE_VERSION:?use o Makefile (make dev), que lê o .nvmrc}
+    image: hub-backend-dev
+    user: '${DEV_UID:-1000}:${DEV_GID:-1000}'
+    command: sh -c "yarn install --frozen-lockfile --network-timeout 600000 && yarn develop"
+    env_file: .env.dev
+    # O banco é sempre o MySQL deste compose, qualquer que seja o .env.dev.
+    environment:
+      PORT: 1340
+      DATABASE_CLIENT: mysql
+      DATABASE_HOST: backend-db
+      DATABASE_PORT: 3306
+      DATABASE_NAME: hub
+      DATABASE_USERNAME: hub
+      DATABASE_PASSWORD: hub
+      DATABASE_SSL: 'false'
+    ports:
+      - '${BACKEND_PORT:-1340}:1340'
+    volumes:
+      - .:/opt/app
+      # O .env real da máquina nunca entra no container: lá dentro o .env é o .env.dev.
+      - ./.env.dev:/opt/app/.env:ro
+      # Diretório git no mesmo caminho do host: num git worktree o .git é um arquivo que aponta
+      # para lá, e sem isso todo git dentro do container falha (o yarn usa git).
+      - ${BACKEND_GIT_DIR:-./.git}:${BACKEND_GIT_DIR:-/opt/app/.git}:ro
+      - backend-node-modules:/opt/app/node_modules
+      - backend-yarn-cache:/cache/yarn
+    depends_on:
+      backend-db:
+        condition: service_healthy
+
+  # Banco só de desenvolvimento; usuário e senha fixos e públicos.
+  backend-db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: hub
+      MYSQL_USER: hub
+      MYSQL_PASSWORD: hub
+      MYSQL_ROOT_PASSWORD: hub-root
+    ports:
+      - '127.0.0.1:${BACKEND_DB_PORT:-3307}:3306'
+    volumes:
+      - backend-db-data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-uroot', '-phub-root']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+# Nomes fixos: make dev aqui e make hub no frontend usam os mesmos volumes (banco, node_modules).
+volumes:
+  backend-node-modules:
+    name: hub-backend-dev-backend-node-modules
+  backend-yarn-cache:
+    name: hub-backend-dev-backend-yarn-cache
+  backend-db-data:
+    name: hub-backend-dev-backend-db-data
