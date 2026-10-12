@@ -156,6 +156,10 @@ missing actions. It only adds: it never deletes a role or permission and never c
 app with `ROLES_DRY_RUN=true`, which logs the plan and skips the rest of the bootstrap (loading Strapi
 still syncs the schema, as any start does).
 `api::role-change` is granted to no role; only the bff (full-access API token) writes and reads it.
+`PUT /api/users/:id` (users-permissions `user.update`, granted to `authenticated`) has no ownership
+check in the plugin; `register()` wraps it with `roles/user-update-guard`: with a user JWT only the
+user's own record, and never `role`, `blocked`, `confirmed`, `provider`, tokens or `password_pending`.
+API-token requests (the bff) are unchanged.
 
 ### Bootstrap
 `src/index.ts` configures password reset email on startup. Sets reset URL to `${PUBLIC_URL}/admin/auth/reset-password` and stores it in the users-permissions plugin store.

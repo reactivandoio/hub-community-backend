@@ -2,6 +2,7 @@
 
 import { wrapResetPassword } from './api/account-setup/services/account-setup-helpers';
 import { ensureRoles } from './roles/ensure-roles';
+import { wrapUserUpdate } from './roles/user-update-guard';
 
 export default {
   // register() is defined below with email-confirmation and reset-password overrides
@@ -123,6 +124,11 @@ export default {
         throw err;
       }
     };
+
+    // PUT /api/users/:id with a user JWT: only the user's own record, never role/blocked/…
+    // (the plugin route has no ownership check) — see roles/user-update-guard
+    const userController = strapi.plugin("users-permissions").controller("user");
+    userController.update = wrapUserUpdate(userController.update);
 
     // Override reset-password so creating the first password (link from the signup e-mail)
     // clears password_pending — see api/account-setup
