@@ -2,6 +2,7 @@
 
 import { wrapResetPassword } from './api/account-setup/services/account-setup-helpers';
 import { ensureRoles } from './roles/ensure-roles';
+import { applyInitialAssignments } from './roles/initial-assignments';
 import { wrapUserUpdate } from './roles/user-update-guard';
 
 export default {
@@ -15,11 +16,13 @@ export default {
    * run jobs, or perform some special logic.
    */
   async bootstrap({ strapi }: { strapi: any }) {
-    // Roles and their content-API permissions (src/roles). With ROLES_DRY_RUN=true
+    // Roles, their content-API permissions and the first assignments (src/roles). With ROLES_DRY_RUN=true
     // (yarn roles:check) it only logs the plan and the rest of the bootstrap is skipped.
     const rolesDryRun = process.env.ROLES_DRY_RUN === 'true';
     try {
       await ensureRoles(strapi, { dryRun: rolesDryRun });
+      // First admins (INITIAL_ADMIN_EMAILS) and organizers -> community-manager, once each.
+      await applyInitialAssignments(strapi, { dryRun: rolesDryRun });
     } catch (err) {
       strapi.log.error('Failed to bootstrap permissions: ' + err.message);
       if (rolesDryRun) throw err;

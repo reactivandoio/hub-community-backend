@@ -155,6 +155,12 @@ missing actions. It only adds: it never deletes a role or permission and never c
 — the first admin is assigned by hand (Content Manager → User → Role). `yarn roles:check` loads the
 app with `ROLES_DRY_RUN=true`, which logs the plan and skips the rest of the bootstrap (loading Strapi
 still syncs the schema, as any start does).
+After `ensureRoles`, `applyInitialAssignments` (`src/roles/initial-assignments.ts`, plan logic tested)
+promotes to `admin` the users whose e-mail is in `INITIAL_ADMIN_EMAILS`, and to `community-manager`
+the users in `community.organizers` (non-deleted communities) still on `authenticated`. Each runs once —
+applied e-mails and the organizers step are remembered in the plugin store `hub-roles` — so a role
+changed later in the Hub admin is not undone by a restart; it never creates accounts nor demotes, and
+each change is written to `role-change` with actor "migration". Logs mask e-mails.
 `api::role-change` is granted to no role; only the bff (full-access API token) writes and reads it.
 `PUT /api/users/:id` (users-permissions `user.update`, granted to `authenticated`) has no ownership
 check in the plugin; `register()` wraps it with `roles/user-update-guard`: with a user JWT only the
