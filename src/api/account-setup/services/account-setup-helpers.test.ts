@@ -5,6 +5,8 @@ import {
   buildUsername,
   setupAccount,
   wrapResetPassword,
+  accountStatuses,
+  ACCOUNT_STATUS_MAX_EMAILS,
 } from './account-setup-helpers';
 
 // randomHex returns a predictable value per byte count so assertions can check where each
@@ -183,5 +185,37 @@ describe('wrapResetPassword', () => {
     expect(original).toHaveBeenCalled();
     expect(deps.findUserIdByResetCode).not.toHaveBeenCalled();
     expect(deps.clearPasswordPending).not.toHaveBeenCalled();
+  });
+});
+
+describe('accountStatuses (REA-22)', () => {
+  it('tells which accounts still have no password of their own', async () => {
+    const find = vi.fn().mockResolvedValue([
+      { email: 'Ana@Example.com', password_pending: true },
+      { email: 'bia@example.com', password_pending: false },
+      { email: 'caio@example.com', password_pending: null },
+    ]);
+    const result = await accountStatuses(['ana@example.com', 'bia@example.com', 'caio@example.com'], find);
+    expect(result).toEqual([
+      { email: 'ana@example.com', pending: true },
+      { email: 'bia@example.com', pending: false },
+      { email: 'caio@example.com', pending: false },
+    ]);
+  });
+
+  it('normalizes, dedupes and drops invalid e-mails before asking', async () => {
+    const find = vi.fn().mockResolvedValue([]);
+    await accountStatuses([' Ana@Example.com ', 'ana@example.com', 'nope', 42, null], find);
+    expect(find).toHaveBeenCalledWith(['ana@example.com']);
+  });
+
+  it('does not query without a valid e-mail and caps the list', async () => {
+    const find = vi.fn().mockResolvedValue([]);
+    expect(await accountStatuses(undefined, find)).toEqual([]);
+    expect(await accountStatuses(['x'], find)).toEqual([]);
+    expect(find).not.toHaveBeenCalled();
+    const many = Array.from({ length: ACCOUNT_STATUS_MAX_EMAILS + 10 }, (_, i) => `u${i}@example.com`);
+    await accountStatuses(many, find);
+    expect(find.mock.calls[0][0]).toHaveLength(ACCOUNT_STATUS_MAX_EMAILS);
   });
 });
