@@ -1,0 +1,45 @@
+{
+  "kind": "collectionType",
+  "collectionName": "email_campaign_deliveries",
+  "info": {
+    "singularName": "email-campaign-delivery",
+    "pluralName": "email-campaign-deliveries",
+    "displayName": "Email Campaign Delivery",
+    "description": "One e-mail of a campaign to one person; `key` (campaign:email) is unique so nobody gets it twice \u2014 REA-29, bff only"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "key": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "campaign_document_id": {
+      "type": "string",
+      "required": true
+    },
+    "email": {
+      "type": "string",
+      "required": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "sending",
+        "sent",
+        "failed"
+      ],
+      "default": "sending",
+      "required": true
+    },
+    "error": {
+      "type": "text"
+    },
+    "sent_at": {
+      "type": "datetime"
+    }
+  }
+}

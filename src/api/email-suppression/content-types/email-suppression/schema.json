@@ -1,0 +1,35 @@
+{
+  "kind": "collectionType",
+  "collectionName": "email_suppressions",
+  "info": {
+    "singularName": "email-suppression",
+    "pluralName": "email-suppressions",
+    "displayName": "Email Suppression",
+    "description": "E-mails that never receive campaign e-mails (unsubscribe, bounce, complaint) \u2014 REA-29, bff only"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "email": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "reason": {
+      "type": "enumeration",
+      "enum": [
+        "unsubscribe",
+        "bounce",
+        "complaint",
+        "manual"
+      ],
+      "default": "unsubscribe",
+      "required": true
+    },
+    "source": {
+      "type": "string"
+    }
+  }
+}

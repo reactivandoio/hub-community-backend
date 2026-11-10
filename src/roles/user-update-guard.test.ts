@@ -19,6 +19,12 @@ describe('userUpdateRefusal', () => {
       .toMatch(/blocked, confirmed/);
   });
 
+  it('lets a user change their marketing opt-in but never its date (REA-29)', () => {
+    expect(userUpdateRefusal({ ...jwt, paramId: 7, body: { marketing_opt_in: true } })).toBeNull();
+    expect(userUpdateRefusal({ ...jwt, paramId: 7, body: { marketing_opt_in_at: '2020-01-01' } }))
+      .toMatch(/marketing_opt_in_at/);
+  });
+
   it('refuses a JWT request without a user', () => {
     expect(userUpdateRefusal({ strategy: 'users-permissions', authUserId: null, paramId: 7, body: {} }))
       .toMatch(/own user/);
