@@ -30,8 +30,7 @@
       "enum": [
         "sending",
         "sent",
-        "failed",
-        "skipped"
+        "failed"
       ],
       "default": "sending",
       "required": true

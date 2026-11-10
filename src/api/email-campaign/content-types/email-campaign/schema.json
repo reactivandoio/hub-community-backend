@@ -63,10 +63,6 @@
       "type": "integer",
       "default": 0
     },
-    "skipped": {
-      "type": "integer",
-      "default": 0
-    },
     "cursor": {
       "type": "integer",
       "default": 0
