@@ -4,6 +4,7 @@ import { wrapResetPassword } from './api/account-setup/services/account-setup-he
 import { ensureRoles } from './roles/ensure-roles';
 import { applyInitialAssignments } from './roles/initial-assignments';
 import { wrapUserUpdate } from './roles/user-update-guard';
+import { stampOptIn } from './utils/marketing-opt-in';
 
 export default {
   // register() is defined below with email-confirmation and reset-password overrides
@@ -28,6 +29,17 @@ export default {
       if (rolesDryRun) throw err;
     }
     if (rolesDryRun) return;
+
+    // marketing_opt_in_at follows marketing_opt_in, whoever writes it (REA-29) — see utils/marketing-opt-in
+    strapi.db.lifecycles.subscribe({
+      models: ['plugin::users-permissions.user'],
+      beforeCreate(event: any) {
+        event.params.data = stampOptIn(event.params.data);
+      },
+      beforeUpdate(event: any) {
+        event.params.data = stampOptIn(event.params.data);
+      },
+    });
 
     // Add indexes for Performance Considerations (session_id, option_id, fingerprint)
     try {

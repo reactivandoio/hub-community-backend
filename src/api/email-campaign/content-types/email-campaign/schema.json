@@ -1,0 +1,84 @@
+{
+  "kind": "collectionType",
+  "collectionName": "email_campaigns",
+  "info": {
+    "singularName": "email-campaign",
+    "pluralName": "email-campaigns",
+    "displayName": "Email Campaign",
+    "description": "An event e-mail campaign (invite, share, reminder) sent in a daily-quota queue \u2014 REA-29, bff only"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "event_document_id": {
+      "type": "string",
+      "required": true
+    },
+    "event_slug": {
+      "type": "string",
+      "required": true
+    },
+    "event_title": {
+      "type": "string"
+    },
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "invite",
+        "share",
+        "reminder"
+      ],
+      "required": true
+    },
+    "subject": {
+      "type": "string",
+      "required": true
+    },
+    "message": {
+      "type": "text"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "draft",
+        "sending",
+        "paused",
+        "done",
+        "canceled"
+      ],
+      "default": "draft",
+      "required": true
+    },
+    "total": {
+      "type": "integer",
+      "default": 0
+    },
+    "sent": {
+      "type": "integer",
+      "default": 0
+    },
+    "failed": {
+      "type": "integer",
+      "default": 0
+    },
+    "skipped": {
+      "type": "integer",
+      "default": 0
+    },
+    "cursor": {
+      "type": "integer",
+      "default": 0
+    },
+    "created_by_email": {
+      "type": "string"
+    },
+    "started_at": {
+      "type": "datetime"
+    },
+    "finished_at": {
+      "type": "datetime"
+    }
+  }
+}

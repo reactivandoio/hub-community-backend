@@ -162,6 +162,11 @@ applied e-mails and the organizers step are remembered in the plugin store `hub-
 changed later in the Hub admin is not undone by a restart; it never creates accounts nor demotes, and
 each change is written to `role-change` with actor "migration". Logs mask e-mails.
 `api::role-change` is granted to no role; only the bff (full-access API token) writes and reads it.
+The same goes for the e-mail marketing collections (REA-29): `email-campaign`, `email-campaign-delivery`
+(`key` = `<campaign documentId>:<email>`, unique, so nobody gets a campaign twice) and
+`email-suppression` (unsubscribed e-mails, never sent a campaign). The user has `marketing_opt_in`
+(accepted by `/auth/local/register`) and `marketing_opt_in_at`, stamped by a db lifecycle in
+`bootstrap()` (`utils/marketing-opt-in`) and refused by the update guard.
 `PUT /api/users/:id` (users-permissions `user.update`, granted to `authenticated`) has no ownership
 check in the plugin; `register()` wraps it with `roles/user-update-guard`: with a user JWT only the
 user's own record, and never `role`, `blocked`, `confirmed`, `provider`, tokens or `password_pending`.

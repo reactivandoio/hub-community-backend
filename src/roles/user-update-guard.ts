@@ -16,6 +16,8 @@ export const PROTECTED_USER_FIELDS = [
   'resetPasswordToken',
   'confirmationToken',
   'password_pending',
+  // Stamped by the user lifecycle when marketing_opt_in changes (REA-29), never sent by the user.
+  'marketing_opt_in_at',
 ] as const;
 
 export type UserUpdateCheck = {

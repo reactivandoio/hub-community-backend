@@ -2,7 +2,8 @@ export default ({ env }) => ({
   "users-permissions": {
     config: {
       register: {
-        allowedFields: ["name", "phone"],
+        // marketing_opt_in: checkbox of the signup form (REA-29); the date is stamped by the user lifecycle
+        allowedFields: ["name", "phone", "marketing_opt_in"],
       },
     },
   },

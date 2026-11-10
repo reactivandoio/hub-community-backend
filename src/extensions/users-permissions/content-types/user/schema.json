@@ -134,6 +134,13 @@
       "type": "boolean",
       "default": false,
       "private": true
+    },
+    "marketing_opt_in": {
+      "type": "boolean",
+      "default": false
+    },
+    "marketing_opt_in_at": {
+      "type": "datetime"
     }
   }
 }
