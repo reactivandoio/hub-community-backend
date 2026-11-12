@@ -768,6 +768,131 @@ export interface ApiCommunityCommunity extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiEmailCampaignDeliveryEmailCampaignDelivery
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'email_campaign_deliveries';
+  info: {
+    description: 'One e-mail of a campaign to one person; `key` (campaign:email) is unique so nobody gets it twice \u2014 REA-29, bff only';
+    displayName: 'Email Campaign Delivery';
+    pluralName: 'email-campaign-deliveries';
+    singularName: 'email-campaign-delivery';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    campaign_document_id: Schema.Attribute.String & Schema.Attribute.Required;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    email: Schema.Attribute.String & Schema.Attribute.Required;
+    error: Schema.Attribute.Text;
+    key: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::email-campaign-delivery.email-campaign-delivery'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    sent_at: Schema.Attribute.DateTime;
+    status: Schema.Attribute.Enumeration<['sending', 'sent', 'failed']> &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'sending'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiEmailCampaignEmailCampaign
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'email_campaigns';
+  info: {
+    description: 'An event e-mail campaign (invite, share, reminder) sent in a daily-quota queue \u2014 REA-29, bff only';
+    displayName: 'Email Campaign';
+    pluralName: 'email-campaigns';
+    singularName: 'email-campaign';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    created_by_email: Schema.Attribute.String;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    cursor: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    event_document_id: Schema.Attribute.String & Schema.Attribute.Required;
+    event_slug: Schema.Attribute.String & Schema.Attribute.Required;
+    event_title: Schema.Attribute.String;
+    failed: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    finished_at: Schema.Attribute.DateTime;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::email-campaign.email-campaign'
+    > &
+      Schema.Attribute.Private;
+    message: Schema.Attribute.Text;
+    publishedAt: Schema.Attribute.DateTime;
+    sent: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    started_at: Schema.Attribute.DateTime;
+    status: Schema.Attribute.Enumeration<
+      ['draft', 'sending', 'paused', 'done', 'canceled']
+    > &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'draft'>;
+    subject: Schema.Attribute.String & Schema.Attribute.Required;
+    total: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    type: Schema.Attribute.Enumeration<['invite', 'share', 'reminder']> &
+      Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiEmailSuppressionEmailSuppression
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'email_suppressions';
+  info: {
+    description: 'E-mails that never receive campaign e-mails (unsubscribe, bounce, complaint) \u2014 REA-29, bff only';
+    displayName: 'Email Suppression';
+    pluralName: 'email-suppressions';
+    singularName: 'email-suppression';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    email: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::email-suppression.email-suppression'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    reason: Schema.Attribute.Enumeration<
+      ['unsubscribe', 'bounce', 'complaint', 'manual']
+    > &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'unsubscribe'>;
+    source: Schema.Attribute.String;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiEventFeedbackEventFeedback
   extends Struct.CollectionTypeSchema {
   collectionName: 'event_feedbacks';
@@ -997,6 +1122,10 @@ export interface ApiEventEvent extends Struct.CollectionTypeSchema {
       'api::participant.participant'
     >;
     publishedAt: Schema.Attribute.DateTime;
+    share_art_config: Schema.Attribute.Relation<
+      'oneToOne',
+      'api::share-art-config.share-art-config'
+    >;
     slug: Schema.Attribute.String & Schema.Attribute.Unique;
     start_date: Schema.Attribute.DateTime;
     subscription_link: Schema.Attribute.String;
@@ -1107,6 +1236,7 @@ export interface ApiParticipantParticipant extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
+    adult_declaration_at: Schema.Attribute.DateTime;
     category: Schema.Attribute.String &
       Schema.Attribute.DefaultTo<'Participante'>;
     certificate_request_form: Schema.Attribute.Relation<
@@ -1209,6 +1339,40 @@ export interface ApiRoleChangeRoleChange extends Struct.CollectionTypeSchema {
     >;
     target_email: Schema.Attribute.String;
     to_role: Schema.Attribute.String & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiShareArtConfigShareArtConfig
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'share_art_configs';
+  info: {
+    description: 'Arte "eu vou" personalizada de um evento: fundo e \u00E1rea da foto por formato (9:16 e 1:1)';
+    displayName: 'Share Art Config';
+    pluralName: 'share-art-configs';
+    singularName: 'share-art-config';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    event: Schema.Attribute.Relation<'oneToOne', 'api::event.event'>;
+    feed_background: Schema.Attribute.Media<'images'>;
+    feed_photo_area: Schema.Attribute.Component<'share-art.photo-area', false>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::share-art-config.share-art-config'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    story_background: Schema.Attribute.Media<'images'>;
+    story_photo_area: Schema.Attribute.Component<'share-art.photo-area', false>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -1980,6 +2144,14 @@ export interface PluginUsersPermissionsUser
     draftAndPublish: false;
   };
   attributes: {
+    adult_declaration: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<false>;
+    adult_declaration_at: Schema.Attribute.DateTime;
+    age_review_blocked_at: Schema.Attribute.DateTime;
+    age_review_requested_at: Schema.Attribute.DateTime;
+    age_review_status: Schema.Attribute.Enumeration<
+      ['dob_requested', 'dob_blocked', 'minor_blocked']
+    >;
     agenda: Schema.Attribute.Relation<'oneToMany', 'api::agenda.agenda'>;
     blocked: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     communities: Schema.Attribute.Relation<
@@ -2008,6 +2180,9 @@ export interface PluginUsersPermissionsUser
       'plugin::users-permissions.user'
     > &
       Schema.Attribute.Private;
+    marketing_opt_in: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<false>;
+    marketing_opt_in_at: Schema.Attribute.DateTime;
     name: Schema.Attribute.String;
     password: Schema.Attribute.Password &
       Schema.Attribute.Private &
@@ -2060,6 +2235,9 @@ declare module '@strapi/strapi' {
       'api::comment-reply.comment-reply': ApiCommentReplyCommentReply;
       'api::comment.comment': ApiCommentComment;
       'api::community.community': ApiCommunityCommunity;
+      'api::email-campaign-delivery.email-campaign-delivery': ApiEmailCampaignDeliveryEmailCampaignDelivery;
+      'api::email-campaign.email-campaign': ApiEmailCampaignEmailCampaign;
+      'api::email-suppression.email-suppression': ApiEmailSuppressionEmailSuppression;
       'api::event-feedback.event-feedback': ApiEventFeedbackEventFeedback;
       'api::event.event': ApiEventEvent;
       'api::link.link': ApiLinkLink;
@@ -2067,6 +2245,7 @@ declare module '@strapi/strapi' {
       'api::participant.participant': ApiParticipantParticipant;
       'api::rate.rate': ApiRateRate;
       'api::role-change.role-change': ApiRoleChangeRoleChange;
+      'api::share-art-config.share-art-config': ApiShareArtConfigShareArtConfig;
       'api::speaker.speaker': ApiSpeakerSpeaker;
       'api::sw-form.sw-form': ApiSwFormSwForm;
       'api::tag.tag': ApiTagTag;
