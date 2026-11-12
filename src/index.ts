@@ -5,6 +5,20 @@ import { ensureRoles } from './roles/ensure-roles';
 import { applyInitialAssignments } from './roles/initial-assignments';
 import { wrapUserUpdate } from './roles/user-update-guard';
 import { stampOptIn } from './utils/marketing-opt-in';
+import { applyDateOfBirthRules, DateOfBirthError, stampAdultDeclaration } from './utils/age-review';
+import { errors } from '@strapi/utils';
+
+const USER_UID = 'plugin::users-permissions.user';
+
+// REA-36: a refused date of birth answers 400 with the reason, from any write path.
+const withDateOfBirthRules = (data: any, current: any) => {
+  try {
+    return applyDateOfBirthRules(data, current);
+  } catch (err) {
+    if (err instanceof DateOfBirthError) throw new errors.ValidationError(err.message);
+    throw err;
+  }
+};
 
 export default {
   // register() is defined below with email-confirmation and reset-password overrides
@@ -30,14 +44,31 @@ export default {
     }
     if (rolesDryRun) return;
 
-    // marketing_opt_in_at follows marketing_opt_in, whoever writes it (REA-29) — see utils/marketing-opt-in
+    // marketing_opt_in_at follows marketing_opt_in, whoever writes it (REA-29) — see utils/marketing-opt-in.
+    // REA-36: adult_declaration_at follows adult_declaration, and date_of_birth must be 18+ — see
+    // utils/age-review.
     strapi.db.lifecycles.subscribe({
-      models: ['plugin::users-permissions.user'],
+      models: [USER_UID],
       beforeCreate(event: any) {
-        event.params.data = stampOptIn(event.params.data);
+        const data = stampAdultDeclaration(stampOptIn(event.params.data));
+        event.params.data = withDateOfBirthRules(data, null);
       },
-      beforeUpdate(event: any) {
-        event.params.data = stampOptIn(event.params.data);
+      async beforeUpdate(event: any) {
+        const data = stampAdultDeclaration(stampOptIn(event.params.data));
+        const current = data && data.date_of_birth
+          ? await strapi.db.query(USER_UID).findOne({
+              where: event.params.where,
+              select: ['date_of_birth', 'age_review_status'],
+            })
+          : null;
+        event.params.data = withDateOfBirthRules(data, current ?? {});
+      },
+    });
+    // REA-36: the certificate request form also asks for the date of birth — 18+ only.
+    strapi.db.lifecycles.subscribe({
+      models: ['api::participant.participant'],
+      beforeCreate(event: any) {
+        event.params.data = withDateOfBirthRules(event.params.data, null);
       },
     });
 

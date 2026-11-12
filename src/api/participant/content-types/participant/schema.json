@@ -46,6 +46,9 @@
       "relation": "manyToOne",
       "target": "api::certificate-request-form.certificate-request-form",
       "inversedBy": "participants"
+    },
+    "adult_declaration_at": {
+      "type": "datetime"
     }
   }
 }
