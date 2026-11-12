@@ -18,6 +18,11 @@ export const PROTECTED_USER_FIELDS = [
   'password_pending',
   // Stamped by the user lifecycle when marketing_opt_in changes (REA-29), never sent by the user.
   'marketing_opt_in_at',
+  // Age rules (REA-36): the declaration date is stamped by the lifecycle; the review is the admin's.
+  'adult_declaration_at',
+  'age_review_status',
+  'age_review_requested_at',
+  'age_review_blocked_at',
 ] as const;
 
 export type UserUpdateCheck = {

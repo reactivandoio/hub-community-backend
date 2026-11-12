@@ -141,6 +141,27 @@
     },
     "marketing_opt_in_at": {
       "type": "datetime"
+    },
+    "adult_declaration": {
+      "type": "boolean",
+      "default": false
+    },
+    "adult_declaration_at": {
+      "type": "datetime"
+    },
+    "age_review_status": {
+      "type": "enumeration",
+      "enum": [
+        "dob_requested",
+        "dob_blocked",
+        "minor_blocked"
+      ]
+    },
+    "age_review_requested_at": {
+      "type": "datetime"
+    },
+    "age_review_blocked_at": {
+      "type": "datetime"
     }
   }
 }

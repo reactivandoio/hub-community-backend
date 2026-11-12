@@ -172,6 +172,23 @@ check in the plugin; `register()` wraps it with `roles/user-update-guard`: with 
 user's own record, and never `role`, `blocked`, `confirmed`, `provider`, tokens or `password_pending`.
 API-token requests (the bff) are unchanged.
 
+### Age rules (REA-36)
+The Hub is 18+ only. Pure logic in `src/utils/age.ts` (age in São Paulo calendar days) and
+`src/utils/age-review.ts`, applied by the user db lifecycle in `bootstrap()`:
+- `adult_declaration` (accepted by `/auth/local/register`, written by the bff on every signup form) is
+  the "tenho 18 anos ou mais" checkbox; `adult_declaration_at` is stamped by the lifecycle.
+  `participant.adult_declaration_at` records it on certificate requests.
+- `date_of_birth`, when written, must be a valid date of someone aged 18+ (users and participants),
+  or the write answers 400 `ValidationError`. A date equal to the stored one is not re-checked, so
+  old records stay editable.
+- Age review, driven from the Hub admin (`/admin/usuarios`, bff): `age_review_status`
+  `dob_requested` (e-mail asking for the date sent at `age_review_requested_at`), `dob_blocked`,
+  `minor_blocked`, plus `age_review_blocked_at`. A valid date sent while `dob_requested` clears the
+  request. `config/cron-tasks.ts` (`ageReviewBlock`, hourly) blocks (`blocked: true`) the accounts
+  still without a date 7 days after the e-mail; only accounts the admin e-mailed are ever
+  `dob_requested`, so a deploy blocks nobody. `AGE_REVIEW_AUTO_BLOCK=false` turns it off.
+  All these fields are refused by the update guard for user JWTs.
+
 ### Bootstrap
 `src/index.ts` configures password reset email on startup. Sets reset URL to `${PUBLIC_URL}/admin/auth/reset-password` and stores it in the users-permissions plugin store.
 
