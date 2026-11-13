@@ -86,32 +86,6 @@ export async function setupAccount(
   return { created: false, pending: existing.password_pending === true };
 }
 
-export type ResetPasswordDeps = {
-  findUserIdByResetCode: (code: string) => Promise<number | null>;
-  clearPasswordPending: (id: number) => Promise<any>;
-};
-
-/**
- * Wraps users-permissions `auth.resetPassword` so a successful reset clears `password_pending`.
- * The user is looked up by the code *before* the original runs, since it clears the token.
- */
-export function wrapResetPassword(
-  original: (ctx: any) => Promise<any>,
-  deps: ResetPasswordDeps,
-) {
-  return async (ctx: any) => {
-    const code = ctx.request?.body?.code;
-    const userId = typeof code === 'string' && code ? await deps.findUserIdByResetCode(code) : null;
-
-    const result = await original(ctx);
-
-    if (userId) {
-      await deps.clearPasswordPending(userId);
-    }
-    return result;
-  };
-}
-
 // REA-22: at most this many e-mails per account-status call (the bff asks for one or a page).
 export const ACCOUNT_STATUS_MAX_EMAILS = 100;
 

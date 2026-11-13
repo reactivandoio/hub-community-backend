@@ -4,7 +4,6 @@ import {
   normalizeEmail,
   buildUsername,
   setupAccount,
-  wrapResetPassword,
   accountStatuses,
   ACCOUNT_STATUS_MAX_EMAILS,
 } from './account-setup-helpers';
@@ -130,55 +129,6 @@ describe('setupAccount', () => {
     );
     expect(deps.findUserByEmail).not.toHaveBeenCalled();
     expect(deps.createUser).not.toHaveBeenCalled();
-  });
-});
-
-describe('wrapResetPassword', () => {
-  const createCtx = (code?: string) => ({ request: { body: { code } } });
-
-  it('clears password_pending of the user the code belonged to after a successful reset', async () => {
-    const order: string[] = [];
-    const original = vi.fn(async () => {
-      order.push('original');
-    });
-    const deps = {
-      findUserIdByResetCode: vi.fn(async () => {
-        order.push('lookup');
-        return 7;
-      }),
-      clearPasswordPending: vi.fn().mockResolvedValue(undefined),
-    };
-
-    await wrapResetPassword(original, deps)(createCtx('abc'));
-
-    // The lookup has to happen first: the original clears resetPasswordToken.
-    expect(order).toEqual(['lookup', 'original']);
-    expect(deps.findUserIdByResetCode).toHaveBeenCalledWith('abc');
-    expect(deps.clearPasswordPending).toHaveBeenCalledWith(7);
-  });
-
-  it('leaves the user alone when the reset fails', async () => {
-    const error = new Error('Incorrect code provided');
-    const deps = {
-      findUserIdByResetCode: vi.fn().mockResolvedValue(7),
-      clearPasswordPending: vi.fn(),
-    };
-
-    await expect(
-      wrapResetPassword(vi.fn().mockRejectedValue(error), deps)(createCtx('abc')),
-    ).rejects.toBe(error);
-    expect(deps.clearPasswordPending).not.toHaveBeenCalled();
-  });
-
-  it('skips the lookup when no code is sent', async () => {
-    const original = vi.fn().mockResolvedValue(undefined);
-    const deps = { findUserIdByResetCode: vi.fn(), clearPasswordPending: vi.fn() };
-
-    await wrapResetPassword(original, deps)(createCtx(undefined));
-
-    expect(original).toHaveBeenCalled();
-    expect(deps.findUserIdByResetCode).not.toHaveBeenCalled();
-    expect(deps.clearPasswordPending).not.toHaveBeenCalled();
   });
 });
 
