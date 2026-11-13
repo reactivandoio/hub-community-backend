@@ -42,6 +42,7 @@ src/
     certificate/        # Issued participation certificates (unique code, idempotent per event+CPF)
     certificate-config/ # Per-event certificate template (sponsors, signatures, text)
     certificate-request-form/ # Public per-category certificate request form of an event
+    share-art-config/   # Per-event custom "eu vou" art: background + photo area per format (REA-43)
     comment/        # Comments on events/talks/communities
     comment-reply/  # Threaded comment replies
     community/      # Communities with organizers, tags, events
@@ -94,7 +95,7 @@ async delete(documentId: string, params: any) {
   });
 }
 ```
-Entities WITHOUT soft delete: Agenda, Analytics-Event, Attendance, Certificate-Config, Comment, CommentReply, Event-Feedback, Link, Participant, Rate, Sw-Form, Tag, Team, Vote, Voting-Option, Voting-Session.
+Entities WITHOUT soft delete: Agenda, Analytics-Event, Attendance, Certificate-Config, Share-Art-Config, Comment, CommentReply, Event-Feedback, Link, Participant, Rate, Sw-Form, Tag, Team, Vote, Voting-Option, Voting-Session.
 
 ### Unlisted Events
 `Event.unlisted` (boolean, default false) hides an event from the public listings while keeping its
@@ -140,6 +141,17 @@ password, `confirmed: true`). Logging in with a code verifies the e-mail, so it 
 `password_pending: false`. Blocked accounts get neither a code nor a session. Pure logic in
 `services/login-code-helpers.ts` (tested). The plugin's `/auth/local*`, forgot/reset-password routes
 still exist but no client uses them any more.
+
+### Custom "eu vou" art (REA-43)
+`api::share-art-config` is one per event (`event` oneToOne, `Event.share_art_config` mappedBy), written
+and read only by the bff with the integration token (granted to no role). Per format — `story` (9:16)
+and `feed` (1:1) — it holds a background image (`<format>_background`) and the participant photo area
+(`<format>_photo_area`, component `share-art.photo-area`): `x`, `y`, `width`, `height` as fractions of
+the background (0–1, so the area does not depend on the image resolution) and `radius` from 0 (square
+corners) to 1 (circle when the area is square: radius = `radius` × half of the smaller side). They are
+`float` (double), not `decimal`: Strapi creates decimal columns as `decimal(10,2)`. The schema only
+bounds each number to 0–1; the bff checks that the area fits inside the image and that each background
+has its format's ratio. The art itself is drawn in the browser by hub-community-frontend.
 
 ### Account setup (signup without login)
 `POST /api/account-setup` (`{ email, name?, phone? }` → `{ created, pending }`) is called only by the bff
