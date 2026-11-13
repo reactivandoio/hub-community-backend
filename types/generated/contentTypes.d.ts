@@ -1126,6 +1126,8 @@ export interface ApiEventEvent extends Struct.CollectionTypeSchema {
       'oneToOne',
       'api::share-art-config.share-art-config'
     >;
+    share_art_open: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<false>;
     slug: Schema.Attribute.String & Schema.Attribute.Unique;
     start_date: Schema.Attribute.DateTime;
     subscription_link: Schema.Attribute.String;

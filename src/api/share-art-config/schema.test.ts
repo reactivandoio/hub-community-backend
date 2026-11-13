@@ -42,3 +42,14 @@ describe('share-art-config schema', () => {
     }
   });
 });
+
+// REA-45: the organizer opens the art to people who are not signed up. Off unless set, so every
+// existing event keeps the art for its signups only.
+describe('event.share_art_open', () => {
+  it('is a boolean that defaults to false', () => {
+    expect((event.attributes as Record<string, unknown>).share_art_open).toEqual({
+      type: 'boolean',
+      default: false,
+    });
+  });
+});
