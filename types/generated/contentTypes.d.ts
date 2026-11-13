@@ -1351,7 +1351,7 @@ export interface ApiShareArtConfigShareArtConfig
   extends Struct.CollectionTypeSchema {
   collectionName: 'share_art_configs';
   info: {
-    description: 'Arte "eu vou" personalizada de um evento: fundo e \u00E1reas da foto, do nome e do papel por formato (9:16 e 1:1), e o papel por produto';
+    description: 'Arte "eu vou" personalizada de um evento: fundo e \u00E1reas da foto, do nome e do papel por formato (9:16 e 4:5)';
     displayName: 'Share Art Config';
     pluralName: 'share-art-configs';
     singularName: 'share-art-config';
@@ -1363,11 +1363,6 @@ export interface ApiShareArtConfigShareArtConfig
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
-    default_role: Schema.Attribute.String &
-      Schema.Attribute.SetMinMaxLength<{
-        maxLength: 40;
-      }> &
-      Schema.Attribute.DefaultTo<'Participante'>;
     event: Schema.Attribute.Relation<'oneToOne', 'api::event.event'>;
     feed_background: Schema.Attribute.Media<'images'>;
     feed_name_text: Schema.Attribute.Component<'share-art.text-area', false>;
@@ -1379,7 +1374,6 @@ export interface ApiShareArtConfigShareArtConfig
       'api::share-art-config.share-art-config'
     > &
       Schema.Attribute.Private;
-    product_roles: Schema.Attribute.Component<'share-art.product-role', true>;
     publishedAt: Schema.Attribute.DateTime;
     story_background: Schema.Attribute.Media<'images'>;
     story_name_text: Schema.Attribute.Component<'share-art.text-area', false>;

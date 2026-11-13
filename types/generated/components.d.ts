@@ -119,26 +119,6 @@ export interface ShareArtPhotoArea extends Struct.ComponentSchema {
   };
 }
 
-export interface ShareArtProductRole extends Struct.ComponentSchema {
-  collectionName: 'components_share_art_product_roles';
-  info: {
-    description: 'Papel na arte de quem se inscreveu com um produto (tipo de ingresso) do Eventando';
-    displayName: 'Product Role';
-  };
-  attributes: {
-    product_id: Schema.Attribute.String &
-      Schema.Attribute.Required &
-      Schema.Attribute.SetMinMaxLength<{
-        maxLength: 64;
-      }>;
-    role: Schema.Attribute.String &
-      Schema.Attribute.Required &
-      Schema.Attribute.SetMinMaxLength<{
-        maxLength: 40;
-      }>;
-  };
-}
-
 export interface ShareArtTextArea extends Struct.ComponentSchema {
   collectionName: 'components_share_art_text_areas';
   info: {
@@ -220,7 +200,6 @@ declare module '@strapi/strapi' {
       'certificate.sponsor': CertificateSponsor;
       'feedback.meal-rating': FeedbackMealRating;
       'share-art.photo-area': ShareArtPhotoArea;
-      'share-art.product-role': ShareArtProductRole;
       'share-art.text-area': ShareArtTextArea;
     }
   }

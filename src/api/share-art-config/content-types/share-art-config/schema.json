@@ -5,7 +5,7 @@
     "singularName": "share-art-config",
     "pluralName": "share-art-configs",
     "displayName": "Share Art Config",
-    "description": "Arte \"eu vou\" personalizada de um evento: fundo e áreas da foto, do nome e do papel por formato (9:16 e 1:1), e o papel por produto"
+    "description": "Arte \"eu vou\" personalizada de um evento: fundo e áreas da foto, do nome e do papel por formato (9:16 e 4:5)"
   },
   "options": { "draftAndPublish": false },
   "pluginOptions": {},
@@ -57,16 +57,6 @@
       "type": "component",
       "repeatable": false,
       "component": "share-art.text-area"
-    },
-    "product_roles": {
-      "type": "component",
-      "repeatable": true,
-      "component": "share-art.product-role"
-    },
-    "default_role": {
-      "type": "string",
-      "maxLength": 40,
-      "default": "Participante"
     }
   }
 }
