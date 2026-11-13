@@ -96,3 +96,11 @@ describe('share-art-config texts and roles', () => {
     expect(attributes.default_role).toBeUndefined();
   });
 });
+
+// REA-49: which roles the generator offers. Null (every row saved before) = all of them; the bff
+// validates the list against its roles and keeps their order.
+describe('share-art-config roles', () => {
+  it('is an optional json list, null by default', () => {
+    expect((config.attributes as Record<string, unknown>).roles).toEqual({ type: 'json' });
+  });
+});

@@ -5,7 +5,7 @@
     "singularName": "share-art-config",
     "pluralName": "share-art-configs",
     "displayName": "Share Art Config",
-    "description": "Arte \"eu vou\" personalizada de um evento: fundo e áreas da foto, do nome e do papel por formato (9:16 e 4:5)"
+    "description": "Arte \"eu vou\" personalizada de um evento: fundo e áreas da foto, do nome e do papel por formato (9:16 e 4:5) e os papéis oferecidos no gerador"
   },
   "options": { "draftAndPublish": false },
   "pluginOptions": {},
@@ -57,6 +57,9 @@
       "type": "component",
       "repeatable": false,
       "component": "share-art.text-area"
+    },
+    "roles": {
+      "type": "json"
     }
   }
 }
