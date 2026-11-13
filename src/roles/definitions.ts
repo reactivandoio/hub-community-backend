@@ -162,6 +162,14 @@ export const ROLE_DEFINITIONS: readonly RoleDefinition[] = [
     actions: AUTHENTICATED_ACTIONS,
   },
   {
+    // REA-48: manages, in the Hub admin, only the events listed in `event.managers` for them.
+    type: 'event-manager',
+    name: 'Event Manager',
+    description: 'Manages, in the Hub admin, only the events they were made manager of.',
+    actions: AUTHENTICATED_ACTIONS,
+    inheritsFrom: 'authenticated',
+  },
+  {
     type: 'community-manager',
     name: 'Community Manager',
     description: 'Manages, in the Hub admin, the communities they organize and their events.',
@@ -178,4 +186,4 @@ export const ROLE_DEFINITIONS: readonly RoleDefinition[] = [
 ];
 
 /** Roles the Hub admin may assign to a user (the bff keeps the same list). */
-export const ASSIGNABLE_ROLE_TYPES = ['authenticated', 'community-manager', 'admin'] as const;
+export const ASSIGNABLE_ROLE_TYPES = ['authenticated', 'event-manager', 'community-manager', 'admin'] as const;

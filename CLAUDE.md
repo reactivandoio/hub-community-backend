@@ -36,6 +36,7 @@ src/
   api/              # API modules (22 entities)
     account-setup/      # POST /api/account-setup — bff-only (API token), no content type
     login-code/         # REA-26: login by a code e-mailed — POST /api/login-code/{request,verify}, bff-only
+    management-invite/  # REA-48: e-mailed invites to organize a community or manage an event, bff-only
     agenda/         # User event agendas
     analytics-event/    # Tracking events
     attendance/         # Lista de presença (user × event)
@@ -198,8 +199,8 @@ All validation is declarative in `schema.json` files — not in code. Patterns i
 
 ### Roles and permissions
 `src/roles/definitions.ts` lists the users-permissions roles and their content-API actions:
-`public`, `authenticated` (every user, the default), `community-manager` and `admin`. Both new roles
-hold every `authenticated` action — the list plus whatever that role has in the database, e.g. the
+`public`, `authenticated` (every user, the default), `event-manager` (REA-48), `community-manager` and
+`admin`. The roles above `authenticated` hold every `authenticated` action — the list plus whatever that role has in the database, e.g. the
 plugin's `auth.changePassword` — because a user has one role and must not lose anything by moving.
 What admin and community-manager may do in the Hub admin is decided in `hub-community-bff`
 (`utils/auth`, by `role.type`), which works with the integration token.
@@ -225,6 +226,20 @@ The same goes for the e-mail marketing collections (REA-29): `email-campaign`, `
 check in the plugin; `register()` wraps it with `roles/user-update-guard`: with a user JWT only the
 user's own record, and never `role`, `blocked`, `confirmed`, `provider`, tokens or `password_pending`.
 API-token requests (the bff) are unchanged.
+
+### Organizers, event managers and invites (REA-48)
+`Event.managers` (manyToMany users, `User.managed_events` mappedBy) lists who manages one event in
+the Hub admin; with the `event-manager` role (or `community-manager`) they act on that event like its
+community's organizers, without creating events or touching the community — the rules live in the
+bff (`utils/auth`: `isEventOrganizer` accepts managers, `isEventOwner` does not). Neither the role
+nor the list alone grants anything. `api::management-invite` (granted to no role; only the bff writes
+and reads it) is an e-mailed invite to organize a community (`kind` `community_organizer`, admin
+only) or manage an event (`event_manager`, admin or the event's community organizers): `email`,
+`token_hash` (sha256 of the link's token, unique, private — the token itself is never stored),
+`expires_at` (7 days), `accepted_at` / `accepted_by` (used once), `revoked_at`, `community` / `event`,
+`invited_by` / `invited_by_email`. The update guard refuses `communities` and `managed_events` for user
+JWTs, so nobody adds themselves to a community or an event through `PUT /api/users/:id` (until now
+`communities` was not protected).
 
 ### Age rules (REA-36)
 The Hub is 18+ only. Pure logic in `src/utils/age.ts` (age in São Paulo calendar days) and

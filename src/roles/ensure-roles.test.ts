@@ -68,8 +68,8 @@ describe('planRoles', () => {
     expect(plan.createRoles.map((r) => r.type)).toEqual(['admin']);
   });
 
-  it('defines admin and community-manager with every authenticated action', () => {
-    for (const type of ['admin', 'community-manager']) {
+  it('defines admin, community-manager and event-manager with every authenticated action', () => {
+    for (const type of ['admin', 'community-manager', 'event-manager']) {
       const def = ROLE_DEFINITIONS.find((d) => d.type === type);
       expect(def?.actions).toEqual(expect.arrayContaining([...AUTHENTICATED_ACTIONS]));
     }
@@ -116,7 +116,7 @@ describe('ensureRoles', () => {
   it('dry run plans but writes nothing', async () => {
     const strapi = fakeStrapi(base(), []);
     const plan = await ensureRoles(strapi, { dryRun: true });
-    expect(plan.createRoles.map((r) => r.type)).toEqual(['community-manager', 'admin']);
+    expect(plan.createRoles.map((r) => r.type)).toEqual(['event-manager', 'community-manager', 'admin']);
     expect(strapi.roleQuery.create).not.toHaveBeenCalled();
     expect(strapi.permissionQuery.create).not.toHaveBeenCalled();
     expect(strapi.log.info).toHaveBeenCalledWith('[roles:dry-run] Create role "admin" (Admin)');
@@ -127,7 +127,7 @@ describe('ensureRoles', () => {
     const permissions: any[] = [];
     const strapi = fakeStrapi(roles, permissions);
     await ensureRoles(strapi);
-    expect(roles.map((r) => r.type)).toEqual(['public', 'authenticated', 'community-manager', 'admin']);
+    expect(roles.map((r) => r.type)).toEqual(['public', 'authenticated', 'event-manager', 'community-manager', 'admin']);
     const admin = roles.find((r) => r.type === 'admin');
     expect(permissions.filter((p) => p.role === admin.id).map((p) => p.action).sort()).toEqual(
       [...AUTHENTICATED_ACTIONS].sort(),

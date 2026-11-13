@@ -1117,6 +1117,10 @@ export interface ApiEventEvent extends Struct.CollectionTypeSchema {
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::event.event'> &
       Schema.Attribute.Private;
     location: Schema.Attribute.Relation<'manyToOne', 'api::location.location'>;
+    managers: Schema.Attribute.Relation<
+      'manyToMany',
+      'plugin::users-permissions.user'
+    >;
     participants: Schema.Attribute.Relation<
       'oneToMany',
       'api::participant.participant'
@@ -1220,6 +1224,61 @@ export interface ApiLocationLocation extends Struct.CollectionTypeSchema {
     publishedAt: Schema.Attribute.DateTime;
     region: Schema.Attribute.String;
     title: Schema.Attribute.String;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiManagementInviteManagementInvite
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'management_invites';
+  info: {
+    description: 'REA-48: convite por e-mail para organizar uma comunidade ou gerir um evento no admin do Hub. S\u00F3 o bff l\u00EA e escreve (token de integra\u00E7\u00E3o).';
+    displayName: 'Management Invite';
+    pluralName: 'management-invites';
+    singularName: 'management-invite';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    accepted_at: Schema.Attribute.DateTime;
+    accepted_by: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    community: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::community.community'
+    >;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    email: Schema.Attribute.Email & Schema.Attribute.Required;
+    event: Schema.Attribute.Relation<'manyToOne', 'api::event.event'>;
+    expires_at: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    invited_by: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    invited_by_email: Schema.Attribute.String;
+    kind: Schema.Attribute.Enumeration<
+      ['community_organizer', 'event_manager']
+    > &
+      Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::management-invite.management-invite'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    revoked_at: Schema.Attribute.DateTime;
+    token_hash: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Private &
+      Schema.Attribute.Unique;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -2187,6 +2246,7 @@ export interface PluginUsersPermissionsUser
       'plugin::users-permissions.user'
     > &
       Schema.Attribute.Private;
+    managed_events: Schema.Attribute.Relation<'manyToMany', 'api::event.event'>;
     marketing_opt_in: Schema.Attribute.Boolean &
       Schema.Attribute.DefaultTo<false>;
     marketing_opt_in_at: Schema.Attribute.DateTime;
@@ -2249,6 +2309,7 @@ declare module '@strapi/strapi' {
       'api::event.event': ApiEventEvent;
       'api::link.link': ApiLinkLink;
       'api::location.location': ApiLocationLocation;
+      'api::management-invite.management-invite': ApiManagementInviteManagementInvite;
       'api::participant.participant': ApiParticipantParticipant;
       'api::rate.rate': ApiRateRate;
       'api::role-change.role-change': ApiRoleChangeRoleChange;
