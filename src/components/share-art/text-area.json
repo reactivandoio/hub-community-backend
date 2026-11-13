@@ -1,0 +1,23 @@
+{
+  "collectionName": "components_share_art_text_areas",
+  "info": {
+    "displayName": "Text Area",
+    "description": "Área de um texto da arte (nome ou papel da pessoa) em frações da imagem de fundo (0 a 1), com fonte, tamanho (fração da largura da imagem), cor e alinhamento"
+  },
+  "options": {},
+  "attributes": {
+    "x": { "type": "float", "required": true, "min": 0, "max": 1 },
+    "y": { "type": "float", "required": true, "min": 0, "max": 1 },
+    "width": { "type": "float", "required": true, "min": 0, "max": 1 },
+    "height": { "type": "float", "required": true, "min": 0, "max": 1 },
+    "font": {
+      "type": "enumeration",
+      "enum": ["inter", "inter_bold", "serif", "serif_bold", "dancing_script", "great_vibes", "allura"],
+      "required": true,
+      "default": "inter_bold"
+    },
+    "size": { "type": "float", "required": true, "min": 0.01, "max": 0.2 },
+    "color": { "type": "string", "required": true, "regex": "^#[0-9a-fA-F]{6}$", "default": "#ffffff" },
+    "align": { "type": "enumeration", "enum": ["left", "center", "right"], "required": true, "default": "center" }
+  }
+}

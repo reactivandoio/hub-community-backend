@@ -161,6 +161,15 @@ corners) to 1 (circle when the area is square: radius = `radius` × half of the 
 bounds each number to 0–1; the bff checks that the area fits inside the image and that each background
 has its format's ratio. The art itself is drawn in the browser by hub-community-frontend.
 
+REA-47 adds, per format, `<format>_name_text` and `<format>_role_text` (component
+`share-art.text-area`: `x`, `y`, `width`, `height` in fractions like the photo area, `font` enum,
+`size` as a fraction of the image width 0.01–0.2, `color` `#rrggbb`, `align` left/center/right; null =
+that text is not on the art), plus `product_roles` (repeatable `share-art.product-role`: Eventando
+`product_id` → `role`) and `default_role` ("Participante"). The bff resolves the person's role
+(organizer > speaker > product > default). The feed format became 4:5 (1080×1350); a 1:1 feed
+background already saved stays in the database and the bff ignores it (default art) until a new one
+is saved.
+
 `Event.share_art_open` (boolean, default false — REA-45) lets people who are not signed up generate
 the art too; the organizer switches it in the event form ("Geral") of the Hub admin. Only stored here:
 the bff exposes it and the frontend opens `/events/<slug>/arte`. Old rows hold NULL, read as false by

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import config from './content-types/share-art-config/schema.json';
 import event from '../event/content-types/event/schema.json';
 import area from '../../components/share-art/photo-area.json';
+import text from '../../components/share-art/text-area.json';
+import productRole from '../../components/share-art/product-role.json';
 
 // REA-43: arte "eu vou" personalizada. Strapi only fails at boot when a relation side is missing,
 // so the shape the bff relies on is pinned here.
@@ -50,6 +52,56 @@ describe('event.share_art_open', () => {
     expect((event.attributes as Record<string, unknown>).share_art_open).toEqual({
       type: 'boolean',
       default: false,
+    });
+  });
+});
+
+// REA-47: the name and the role of the person on the art, and the role per product of the Eventando.
+describe('share-art-config texts and roles', () => {
+  it('has one name area and one role area per format, both optional', () => {
+    for (const format of ['story', 'feed'] as const) {
+      for (const kind of ['name', 'role'] as const) {
+        expect((config.attributes as Record<string, unknown>)[`${format}_${kind}_text`]).toEqual({
+          type: 'component',
+          repeatable: false,
+          component: 'share-art.text-area',
+        });
+      }
+    }
+  });
+
+  it('keeps the text area in fractions of the image (float, 0 to 1) like the photo area', () => {
+    for (const key of ['x', 'y', 'width', 'height'] as const) {
+      expect(text.attributes[key]).toMatchObject({ type: 'float', required: true, min: 0, max: 1 });
+    }
+    // The size is a fraction of the image width, so it does not depend on the resolution either.
+    expect(text.attributes.size).toMatchObject({ type: 'float', required: true, min: 0.01, max: 0.2 });
+  });
+
+  it('limits font, color and alignment to what the art draws', () => {
+    expect(text.attributes.font.enum).toEqual([
+      'inter', 'inter_bold', 'serif', 'serif_bold', 'dancing_script', 'great_vibes', 'allura',
+    ]);
+    expect(text.attributes.align.enum).toEqual(['left', 'center', 'right']);
+    const color = new RegExp(text.attributes.color.regex);
+    expect(color.test('#ffffff')).toBe(true);
+    expect(color.test('#FF00aa')).toBe(true);
+    expect(color.test('red')).toBe(false);
+    expect(color.test('#fff')).toBe(false);
+  });
+
+  it('maps products to roles, with "Participante" as the default role', () => {
+    expect((config.attributes as Record<string, unknown>).product_roles).toEqual({
+      type: 'component',
+      repeatable: true,
+      component: 'share-art.product-role',
+    });
+    expect(productRole.attributes.product_id).toMatchObject({ type: 'string', required: true });
+    expect(productRole.attributes.role).toMatchObject({ type: 'string', required: true, maxLength: 40 });
+    expect((config.attributes as Record<string, unknown>).default_role).toEqual({
+      type: 'string',
+      maxLength: 40,
+      default: 'Participante',
     });
   });
 });
