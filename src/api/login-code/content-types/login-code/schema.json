@@ -1,0 +1,43 @@
+{
+  "kind": "collectionType",
+  "collectionName": "login_codes",
+  "info": {
+    "singularName": "login-code",
+    "pluralName": "login-codes",
+    "displayName": "Login Code",
+    "description": "REA-26: one login code sent to an e-mail (only its HMAC is stored). Written and read by the bff's /login-code routes only"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {
+    "content-manager": {
+      "visible": false
+    },
+    "content-type-builder": {
+      "visible": false
+    }
+  },
+  "attributes": {
+    "email": {
+      "type": "string",
+      "required": true
+    },
+    "code_hash": {
+      "type": "string",
+      "required": true,
+      "private": true
+    },
+    "expires_at": {
+      "type": "datetime",
+      "required": true
+    },
+    "attempts": {
+      "type": "integer",
+      "default": 0
+    },
+    "consumed_at": {
+      "type": "datetime"
+    }
+  }
+}

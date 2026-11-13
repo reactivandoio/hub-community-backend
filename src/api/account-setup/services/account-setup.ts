@@ -26,7 +26,6 @@ export default ({ strapi }: { strapi: any }) => ({
           .findOne({ where: { type: 'authenticated' } });
         return userService.add({ ...data, role: role?.id });
       },
-      updateUser: (id, data) => userService.edit(id, data),
       randomHex: (bytes) => crypto.randomBytes(bytes).toString('hex'),
     });
   },

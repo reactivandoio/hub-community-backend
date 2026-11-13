@@ -35,6 +35,7 @@ public/             # Static assets
 src/
   api/              # API modules (22 entities)
     account-setup/      # POST /api/account-setup — bff-only (API token), no content type
+    login-code/         # REA-26: login by a code e-mailed — POST /api/login-code/{request,verify}, bff-only
     agenda/         # User event agendas
     analytics-event/    # Tracking events
     attendance/         # Lista de presença (user × event)
@@ -126,6 +127,21 @@ existed — so no backfill migration is needed. A `certificate-request-form` is 
 event and the category by the service and is never regenerated on update, so a shared link keeps
 working when the title or category is edited.
 
+### Login by e-mail code (REA-26)
+There is no password login in the Hub: the person types the e-mail, gets a 6-digit code and types it
+back. `POST /api/login-code/request` (`{ email }` → `{ status: 'sent', code, expiresAt }` |
+`cooldown` + `retryAfter` | `limit` | `blocked`) and `POST /api/login-code/verify` (`{ email, code }` →
+`{ status: 'ok', jwt, user, created }` | `invalid` + `attemptsLeft` | `expired` | `blocked`) are
+called only by the bff with the integration API token (no `auth` config, so no role has the scope);
+the bff e-mails the code. `api::login-code` stores only `HMAC-SHA256(email:code)` (key
+`LOGIN_CODE_SECRET`, else the users-permissions JWT secret), valid 10 min, 5 tries, one code per
+minute and 10 a day per e-mail; a new code invalidates the previous one. A right code returns a
+regular users-permissions JWT; an unknown e-mail gets its account created then (random unused
+password, `confirmed: true`). Logging in with a code verifies the e-mail, so it sets
+`password_pending: false`. Blocked accounts get neither a code nor a session. Pure logic in
+`services/login-code-helpers.ts` (tested). The plugin's `/auth/local*`, forgot/reset-password routes
+still exist but no client uses them any more.
+
 ### Custom "eu vou" art (REA-43)
 `api::share-art-config` is one per event (`event` oneToOne, `Event.share_art_config` mappedBy), written
 and read only by the bff with the integration token (granted to no role). Per format — `story` (9:16)
@@ -137,15 +153,16 @@ corners) to 1 (circle when the area is square: radius = `radius` × half of the 
 bounds each number to 0–1; the bff checks that the area fits inside the image and that each background
 has its format's ratio. The art itself is drawn in the browser by hub-community-frontend.
 
-### Account setup (signup without password)
-`POST /api/account-setup` (`{ email, name?, phone? }` → `{ created, token }`) is called only by the bff
+### Account setup (signup without login)
+`POST /api/account-setup` (`{ email, name?, phone? }` → `{ created, pending }`) is called only by the bff
 with the integration API token: the route has no `auth` config, so its derived scope
 `api::account-setup.account-setup.setup` is granted to no role (anonymous/JWT → 401/403, full-access
-API token → allowed). It creates the account when missing (random password, `confirmed: true`,
-`password_pending: true`) and, while `password_pending` is true, writes a fresh `resetPasswordToken`
-and returns it for the bff's "Crie sua senha" link. `register()` in `src/index.ts` wraps
-`auth.resetPassword` to set `password_pending: false` after a successful reset. Pure logic lives in
-`services/account-setup-helpers.ts` (tested).
+API token → allowed). It creates the account when missing (random unused password, `confirmed: true`,
+`password_pending: true`) and says whether the account is still pending, for the bff's "conclua seu
+cadastro" e-mail. `password_pending` now means "registration not finished: the e-mail was never
+verified by a login code" (REA-22/REA-26); old accounts that created a password are already false.
+`register()` in `src/index.ts` still wraps `auth.resetPassword` to clear it after an old reset link.
+Pure logic lives in `services/account-setup-helpers.ts` (tested).
 
 ### Schema Validation
 All validation is declarative in `schema.json` files — not in code. Patterns include:

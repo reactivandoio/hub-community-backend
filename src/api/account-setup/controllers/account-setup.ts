@@ -1,8 +1,9 @@
 /**
  * account-setup controller
  *
- * Called only by the bff (integration API token) when someone signs up to an event without a
- * password: makes sure the account exists and returns the token for the "Crie sua senha" link.
+ * Called only by the bff (integration API token) when someone signs up to an event without being
+ * logged in: makes sure the account exists and says whether it still has a pending registration
+ * (`{ created, pending }`), for the bff's "conclua seu cadastro" e-mail (REA-26: login by code).
  */
 
 import { InvalidEmailError } from '../services/account-setup-helpers';
@@ -22,7 +23,7 @@ export default {
   },
 
   // REA-22: { accounts: [{ email, pending }] } for the e-mails that have an account. The
-  // certificate needs a finished registration (password created).
+  // certificate needs a finished registration (e-mail verified by a login code, REA-26).
   async status(ctx: any) {
     const { emails } = ctx.request.body || {};
     ctx.body = { accounts: await strapi.service('api::account-setup.account-setup').status(emails) };

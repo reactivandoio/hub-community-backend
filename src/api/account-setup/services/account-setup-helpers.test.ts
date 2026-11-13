@@ -10,12 +10,11 @@ import {
 } from './account-setup-helpers';
 
 // randomHex returns a predictable value per byte count so assertions can check where each
-// random value went (username suffix, password, reset token).
+// random value went (username suffix, password).
 const createDeps = (overrides: Record<string, any> = {}) => ({
   findUserByEmail: vi.fn().mockResolvedValue(null),
   usernameExists: vi.fn().mockResolvedValue(false),
   createUser: vi.fn(async (data: any) => ({ id: 1, ...data })),
-  updateUser: vi.fn().mockResolvedValue(undefined),
   randomHex: vi.fn((bytes: number) => `hex${bytes}`),
   ...overrides,
 });
@@ -46,7 +45,7 @@ describe('buildUsername', () => {
 });
 
 describe('setupAccount', () => {
-  it('creates a pending account and returns its reset token', async () => {
+  it('creates a pending account without any password token', async () => {
     const deps = createDeps();
 
     const result = await setupAccount(
@@ -54,7 +53,7 @@ describe('setupAccount', () => {
       deps,
     );
 
-    expect(result).toEqual({ created: true, token: 'hex64' });
+    expect(result).toEqual({ created: true, pending: true });
     expect(deps.findUserByEmail).toHaveBeenCalledWith('ana@example.com');
     expect(deps.createUser).toHaveBeenCalledWith({
       email: 'ana@example.com',
@@ -65,9 +64,7 @@ describe('setupAccount', () => {
       name: 'Ana',
       phone: '11999999999',
       password_pending: true,
-      resetPasswordToken: 'hex64',
     });
-    expect(deps.updateUser).not.toHaveBeenCalled();
   });
 
   it('retries the username suffix until it is free', async () => {
@@ -93,39 +90,36 @@ describe('setupAccount', () => {
     expect(data).not.toHaveProperty('phone');
   });
 
-  it('gives an existing pending account a new token without creating a user', async () => {
+  it('reports an existing pending account without creating a user', async () => {
     const deps = createDeps({
       findUserByEmail: vi.fn().mockResolvedValue({ id: 7, password_pending: true }),
     });
 
     const result = await setupAccount({ email: 'ana@example.com', name: 'Ana' }, deps);
 
-    expect(result).toEqual({ created: false, token: 'hex64' });
+    expect(result).toEqual({ created: false, pending: true });
     expect(deps.createUser).not.toHaveBeenCalled();
-    expect(deps.updateUser).toHaveBeenCalledWith(7, { resetPasswordToken: 'hex64' });
   });
 
-  it('does not touch an account that already has a password', async () => {
+  it('reports a finished account as not pending', async () => {
     const deps = createDeps({
       findUserByEmail: vi.fn().mockResolvedValue({ id: 7, password_pending: false }),
     });
 
     const result = await setupAccount({ email: 'ana@example.com' }, deps);
 
-    expect(result).toEqual({ created: false, token: null });
+    expect(result).toEqual({ created: false, pending: false });
     expect(deps.createUser).not.toHaveBeenCalled();
-    expect(deps.updateUser).not.toHaveBeenCalled();
   });
 
-  it('treats accounts from before the field existed (null) as having a password', async () => {
+  it('treats accounts from before the field existed (null) as finished', async () => {
     const deps = createDeps({
       findUserByEmail: vi.fn().mockResolvedValue({ id: 7, password_pending: null }),
     });
 
     const result = await setupAccount({ email: 'ana@example.com' }, deps);
 
-    expect(result).toEqual({ created: false, token: null });
-    expect(deps.updateUser).not.toHaveBeenCalled();
+    expect(result).toEqual({ created: false, pending: false });
   });
 
   it('rejects an invalid e-mail before touching the database', async () => {
