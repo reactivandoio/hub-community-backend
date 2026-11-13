@@ -5,7 +5,7 @@
     "singularName": "share-art-config",
     "pluralName": "share-art-configs",
     "displayName": "Share Art Config",
-    "description": "Arte \"eu vou\" personalizada de um evento: fundo e área da foto por formato (9:16 e 1:1)"
+    "description": "Arte \"eu vou\" personalizada de um evento: fundo e áreas da foto, do nome e do papel por formato (9:16 e 1:1), e o papel por produto"
   },
   "options": { "draftAndPublish": false },
   "pluginOptions": {},
@@ -27,6 +27,16 @@
       "repeatable": false,
       "component": "share-art.photo-area"
     },
+    "story_name_text": {
+      "type": "component",
+      "repeatable": false,
+      "component": "share-art.text-area"
+    },
+    "story_role_text": {
+      "type": "component",
+      "repeatable": false,
+      "component": "share-art.text-area"
+    },
     "feed_background": {
       "type": "media",
       "multiple": false,
@@ -37,6 +47,26 @@
       "type": "component",
       "repeatable": false,
       "component": "share-art.photo-area"
+    },
+    "feed_name_text": {
+      "type": "component",
+      "repeatable": false,
+      "component": "share-art.text-area"
+    },
+    "feed_role_text": {
+      "type": "component",
+      "repeatable": false,
+      "component": "share-art.text-area"
+    },
+    "product_roles": {
+      "type": "component",
+      "repeatable": true,
+      "component": "share-art.product-role"
+    },
+    "default_role": {
+      "type": "string",
+      "maxLength": 40,
+      "default": "Participante"
     }
   }
 }

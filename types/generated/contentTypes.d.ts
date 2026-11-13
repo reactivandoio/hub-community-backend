@@ -1351,7 +1351,7 @@ export interface ApiShareArtConfigShareArtConfig
   extends Struct.CollectionTypeSchema {
   collectionName: 'share_art_configs';
   info: {
-    description: 'Arte "eu vou" personalizada de um evento: fundo e \u00E1rea da foto por formato (9:16 e 1:1)';
+    description: 'Arte "eu vou" personalizada de um evento: fundo e \u00E1reas da foto, do nome e do papel por formato (9:16 e 1:1), e o papel por produto';
     displayName: 'Share Art Config';
     pluralName: 'share-art-configs';
     singularName: 'share-art-config';
@@ -1363,18 +1363,28 @@ export interface ApiShareArtConfigShareArtConfig
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    default_role: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 40;
+      }> &
+      Schema.Attribute.DefaultTo<'Participante'>;
     event: Schema.Attribute.Relation<'oneToOne', 'api::event.event'>;
     feed_background: Schema.Attribute.Media<'images'>;
+    feed_name_text: Schema.Attribute.Component<'share-art.text-area', false>;
     feed_photo_area: Schema.Attribute.Component<'share-art.photo-area', false>;
+    feed_role_text: Schema.Attribute.Component<'share-art.text-area', false>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
       'api::share-art-config.share-art-config'
     > &
       Schema.Attribute.Private;
+    product_roles: Schema.Attribute.Component<'share-art.product-role', true>;
     publishedAt: Schema.Attribute.DateTime;
     story_background: Schema.Attribute.Media<'images'>;
+    story_name_text: Schema.Attribute.Component<'share-art.text-area', false>;
     story_photo_area: Schema.Attribute.Component<'share-art.photo-area', false>;
+    story_role_text: Schema.Attribute.Component<'share-art.text-area', false>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
