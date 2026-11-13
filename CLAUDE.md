@@ -139,8 +139,16 @@ minute and 10 a day per e-mail; a new code invalidates the previous one. A right
 regular users-permissions JWT; an unknown e-mail gets its account created then (random unused
 password, `confirmed: true`). Logging in with a code verifies the e-mail, so it sets
 `password_pending: false`. Blocked accounts get neither a code nor a session. Pure logic in
-`services/login-code-helpers.ts` (tested). The plugin's `/auth/local*`, forgot/reset-password routes
-still exist but no client uses them any more.
+`services/login-code-helpers.ts` (tested).
+
+### Password routes closed (REA-46)
+`register()` runs `closePasswordLogin` (`src/roles/password-login-guard.ts`, tested) on the
+users-permissions `auth` controller: `POST /api/auth/local`, `GET /api/auth/local/callback`,
+`/auth/local/register`, `/auth/forgot-password`, `/auth/reset-password` and `/auth/change-password`
+answer 404 "O login com senha foi desativado…", whatever the role permissions or the token. Still open:
+`/connect/:provider` and `/auth/:provider/callback` of other providers (Google, phase 2) and the
+e-mail confirmation routes. The login code issues its JWT with the plugin's jwt service, the bff uses
+the API token and the Strapi admin logs in under `/admin`, so none of them is affected.
 
 ### Custom "eu vou" art (REA-43)
 `api::share-art-config` is one per event (`event` oneToOne, `Event.share_art_config` mappedBy), written
@@ -161,7 +169,6 @@ API token → allowed). It creates the account when missing (random unused passw
 `password_pending: true`) and says whether the account is still pending, for the bff's "conclua seu
 cadastro" e-mail. `password_pending` now means "registration not finished: the e-mail was never
 verified by a login code" (REA-22/REA-26); old accounts that created a password are already false.
-`register()` in `src/index.ts` still wraps `auth.resetPassword` to clear it after an old reset link.
 Pure logic lives in `services/account-setup-helpers.ts` (tested).
 
 ### Schema Validation
@@ -194,7 +201,7 @@ each change is written to `role-change` with actor "migration". Logs mask e-mail
 The same goes for the e-mail marketing collections (REA-29): `email-campaign`, `email-campaign-delivery`
 (`key` = `<campaign documentId>:<email>`, unique, so nobody gets a campaign twice) and
 `email-suppression` (unsubscribed e-mails, never sent a campaign). The user has `marketing_opt_in`
-(accepted by `/auth/local/register`) and `marketing_opt_in_at`, stamped by a db lifecycle in
+(written by the bff's `updateProfile`, from the complete-profile form) and `marketing_opt_in_at`, stamped by a db lifecycle in
 `bootstrap()` (`utils/marketing-opt-in`) and refused by the update guard.
 `PUT /api/users/:id` (users-permissions `user.update`, granted to `authenticated`) has no ownership
 check in the plugin; `register()` wraps it with `roles/user-update-guard`: with a user JWT only the
@@ -204,7 +211,7 @@ API-token requests (the bff) are unchanged.
 ### Age rules (REA-36)
 The Hub is 18+ only. Pure logic in `src/utils/age.ts` (age in São Paulo calendar days) and
 `src/utils/age-review.ts`, applied by the user db lifecycle in `bootstrap()`:
-- `adult_declaration` (accepted by `/auth/local/register`, written by the bff on every signup form) is
+- `adult_declaration` (written by the bff on every signup form) is
   the "tenho 18 anos ou mais" checkbox; `adult_declaration_at` is stamped by the lifecycle.
   `participant.adult_declaration_at` records it on certificate requests.
 - `date_of_birth`, when written, must be a valid date of someone aged 18+ (users and participants),
@@ -219,7 +226,8 @@ The Hub is 18+ only. Pure logic in `src/utils/age.ts` (age in São Paulo calenda
   All these fields are refused by the update guard for user JWTs.
 
 ### Bootstrap
-`src/index.ts` configures password reset email on startup. Sets reset URL to `${PUBLIC_URL}/admin/auth/reset-password` and stores it in the users-permissions plugin store.
+`src/index.ts` sets the users-permissions e-mail confirmation redirect to `${FRONTEND_URL}/email-confirmed`
+on startup. The reset-password e-mail is no longer configured (REA-46).
 
 ## Entity Relationships
 
