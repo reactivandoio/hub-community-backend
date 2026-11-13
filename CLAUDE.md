@@ -35,6 +35,7 @@ public/             # Static assets
 src/
   api/              # API modules (22 entities)
     account-setup/      # POST /api/account-setup — bff-only (API token), no content type
+    login-code/         # REA-26: login by a code e-mailed — POST /api/login-code/{request,verify}, bff-only
     agenda/         # User event agendas
     analytics-event/    # Tracking events
     attendance/         # Lista de presença (user × event)
@@ -126,6 +127,29 @@ existed — so no backfill migration is needed. A `certificate-request-form` is 
 event and the category by the service and is never regenerated on update, so a shared link keeps
 working when the title or category is edited.
 
+### Login by e-mail code (REA-26)
+There is no password login in the Hub: the person types the e-mail, gets a 6-digit code and types it
+back. `POST /api/login-code/request` (`{ email }` → `{ status: 'sent', code, expiresAt }` |
+`cooldown` + `retryAfter` | `limit` | `blocked`) and `POST /api/login-code/verify` (`{ email, code }` →
+`{ status: 'ok', jwt, user, created }` | `invalid` + `attemptsLeft` | `expired` | `blocked`) are
+called only by the bff with the integration API token (no `auth` config, so no role has the scope);
+the bff e-mails the code. `api::login-code` stores only `HMAC-SHA256(email:code)` (key
+`LOGIN_CODE_SECRET`, else the users-permissions JWT secret), valid 10 min, 5 tries, one code per
+minute and 10 a day per e-mail; a new code invalidates the previous one. A right code returns a
+regular users-permissions JWT; an unknown e-mail gets its account created then (random unused
+password, `confirmed: true`). Logging in with a code verifies the e-mail, so it sets
+`password_pending: false`. Blocked accounts get neither a code nor a session. Pure logic in
+`services/login-code-helpers.ts` (tested).
+
+### Password routes closed (REA-46)
+`register()` runs `closePasswordLogin` (`src/roles/password-login-guard.ts`, tested) on the
+users-permissions `auth` controller: `POST /api/auth/local`, `GET /api/auth/local/callback`,
+`/auth/local/register`, `/auth/forgot-password`, `/auth/reset-password` and `/auth/change-password`
+answer 404 "O login com senha foi desativado…", whatever the role permissions or the token. Still open:
+`/connect/:provider` and `/auth/:provider/callback` of other providers (Google, phase 2) and the
+e-mail confirmation routes. The login code issues its JWT with the plugin's jwt service, the bff uses
+the API token and the Strapi admin logs in under `/admin`, so none of them is affected.
+
 ### Custom "eu vou" art (REA-43)
 `api::share-art-config` is one per event (`event` oneToOne, `Event.share_art_config` mappedBy), written
 and read only by the bff with the integration token (granted to no role). Per format — `story` (9:16)
@@ -142,15 +166,15 @@ the art too; the organizer switches it in the event form ("Geral") of the Hub ad
 the bff exposes it and the frontend opens `/events/<slug>/arte`. Old rows hold NULL, read as false by
 the bff, and nothing filters on it, so no backfill migration is needed.
 
-### Account setup (signup without password)
-`POST /api/account-setup` (`{ email, name?, phone? }` → `{ created, token }`) is called only by the bff
+### Account setup (signup without login)
+`POST /api/account-setup` (`{ email, name?, phone? }` → `{ created, pending }`) is called only by the bff
 with the integration API token: the route has no `auth` config, so its derived scope
 `api::account-setup.account-setup.setup` is granted to no role (anonymous/JWT → 401/403, full-access
-API token → allowed). It creates the account when missing (random password, `confirmed: true`,
-`password_pending: true`) and, while `password_pending` is true, writes a fresh `resetPasswordToken`
-and returns it for the bff's "Crie sua senha" link. `register()` in `src/index.ts` wraps
-`auth.resetPassword` to set `password_pending: false` after a successful reset. Pure logic lives in
-`services/account-setup-helpers.ts` (tested).
+API token → allowed). It creates the account when missing (random unused password, `confirmed: true`,
+`password_pending: true`) and says whether the account is still pending, for the bff's "conclua seu
+cadastro" e-mail. `password_pending` now means "registration not finished: the e-mail was never
+verified by a login code" (REA-22/REA-26); old accounts that created a password are already false.
+Pure logic lives in `services/account-setup-helpers.ts` (tested).
 
 ### Schema Validation
 All validation is declarative in `schema.json` files — not in code. Patterns include:
@@ -182,7 +206,7 @@ each change is written to `role-change` with actor "migration". Logs mask e-mail
 The same goes for the e-mail marketing collections (REA-29): `email-campaign`, `email-campaign-delivery`
 (`key` = `<campaign documentId>:<email>`, unique, so nobody gets a campaign twice) and
 `email-suppression` (unsubscribed e-mails, never sent a campaign). The user has `marketing_opt_in`
-(accepted by `/auth/local/register`) and `marketing_opt_in_at`, stamped by a db lifecycle in
+(written by the bff's `updateProfile`, from the complete-profile form) and `marketing_opt_in_at`, stamped by a db lifecycle in
 `bootstrap()` (`utils/marketing-opt-in`) and refused by the update guard.
 `PUT /api/users/:id` (users-permissions `user.update`, granted to `authenticated`) has no ownership
 check in the plugin; `register()` wraps it with `roles/user-update-guard`: with a user JWT only the
@@ -192,7 +216,7 @@ API-token requests (the bff) are unchanged.
 ### Age rules (REA-36)
 The Hub is 18+ only. Pure logic in `src/utils/age.ts` (age in São Paulo calendar days) and
 `src/utils/age-review.ts`, applied by the user db lifecycle in `bootstrap()`:
-- `adult_declaration` (accepted by `/auth/local/register`, written by the bff on every signup form) is
+- `adult_declaration` (written by the bff on every signup form) is
   the "tenho 18 anos ou mais" checkbox; `adult_declaration_at` is stamped by the lifecycle.
   `participant.adult_declaration_at` records it on certificate requests.
 - `date_of_birth`, when written, must be a valid date of someone aged 18+ (users and participants),
@@ -207,7 +231,8 @@ The Hub is 18+ only. Pure logic in `src/utils/age.ts` (age in São Paulo calenda
   All these fields are refused by the update guard for user JWTs.
 
 ### Bootstrap
-`src/index.ts` configures password reset email on startup. Sets reset URL to `${PUBLIC_URL}/admin/auth/reset-password` and stores it in the users-permissions plugin store.
+`src/index.ts` sets the users-permissions e-mail confirmation redirect to `${FRONTEND_URL}/email-confirmed`
+on startup. The reset-password e-mail is no longer configured (REA-46).
 
 ## Entity Relationships
 

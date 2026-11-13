@@ -1,9 +1,9 @@
 // import type { Core } from '@strapi/strapi';
 
-import { wrapResetPassword } from './api/account-setup/services/account-setup-helpers';
 import { ensureRoles } from './roles/ensure-roles';
 import { applyInitialAssignments } from './roles/initial-assignments';
 import { wrapUserUpdate } from './roles/user-update-guard';
+import { closePasswordLogin } from './roles/password-login-guard';
 import { stampOptIn } from './utils/marketing-opt-in';
 import { applyDateOfBirthRules, DateOfBirthError, stampAdultDeclaration } from './utils/age-review';
 import { errors } from '@strapi/utils';
@@ -21,7 +21,7 @@ const withDateOfBirthRules = (data: any, current: any) => {
 };
 
 export default {
-  // register() is defined below with email-confirmation and reset-password overrides
+  // register() is defined below with the email-confirmation override and the password routes closed (REA-46)
 
   /**
    * An asynchronous bootstrap function that runs before
@@ -98,41 +98,12 @@ export default {
       strapi.log.warn('Could not define custom performance indexes, they might exist or table not ready: ' + err.message);
     }
 
-    // Set the reset password URL programmatically
     const pluginStore = strapi.store({
       type: "plugin",
       name: "users-permissions",
     });
-
-    const settings = await pluginStore.get({ key: "email" });
     const frontendUrl =
       process.env.FRONTEND_URL || "https://hubcommunity.io";
-
-    if (settings && settings.reset_password) {
-      // 1. Force update the response_url
-      const resetPasswordUrl = `${frontendUrl}/reset-password`;
-      settings.reset_password.options.response_url = resetPasswordUrl;
-
-      // 2. Hardcode the URL in the message to be 100% sure it's not empty
-      // We keep the <%= TOKEN %> which is correctly populated by Strapi
-      settings.reset_password.options.message = `
-<p>We heard that you lost your password. Sorry about that!</p>
-<p>But don't worry! You can use the following link to reset your password:</p>
-<p><a href="${resetPasswordUrl}?code=<%= TOKEN %>">${resetPasswordUrl}?code=<%= TOKEN %></a></p>
-<p>Thanks.</p>`.trim();
-
-      await pluginStore.set({ key: "email", value: settings });
-      strapi.log.info(
-        `Reset password configuration updated with hardcoded URL: ${resetPasswordUrl}`,
-      );
-
-      // Verify immediately
-      const updatedSettings = await pluginStore.get({ key: "email" });
-      strapi.log.info(
-        "Verified reset_password options: " +
-          JSON.stringify(updatedSettings.reset_password.options),
-      );
-    }
 
     // Configure email confirmation redirect URL
     const advancedSettings = await pluginStore.get({ key: "advanced" });
@@ -176,20 +147,9 @@ export default {
     const userController = strapi.plugin("users-permissions").controller("user");
     userController.update = wrapUserUpdate(userController.update);
 
-    // Override reset-password so creating the first password (link from the signup e-mail)
-    // clears password_pending — see api/account-setup
-    originalController.resetPassword = wrapResetPassword(originalController.resetPassword, {
-      findUserIdByResetCode: async (code) => {
-        const user = await strapi.db
-          .query("plugin::users-permissions.user")
-          .findOne({ where: { resetPasswordToken: code }, select: ["id"] });
-        return user?.id ?? null;
-      },
-      clearPasswordPending: (id) =>
-        strapi.db
-          .query("plugin::users-permissions.user")
-          .update({ where: { id }, data: { password_pending: false } }),
-    });
+    // REA-46: no password in the Hub (login by e-mail code, REA-26). /auth/local, the signup and
+    // the forgot/reset/change-password routes answer 404 — see roles/password-login-guard
+    closePasswordLogin(originalController);
   },
 };
 
