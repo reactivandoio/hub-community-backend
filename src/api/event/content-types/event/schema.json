@@ -134,6 +134,10 @@
     "unlisted": {
       "type": "boolean",
       "default": false
+    },
+    "share_art_open": {
+      "type": "boolean",
+      "default": false
     }
   }
 }

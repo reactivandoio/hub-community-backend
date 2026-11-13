@@ -161,6 +161,11 @@ corners) to 1 (circle when the area is square: radius = `radius` × half of the 
 bounds each number to 0–1; the bff checks that the area fits inside the image and that each background
 has its format's ratio. The art itself is drawn in the browser by hub-community-frontend.
 
+`Event.share_art_open` (boolean, default false — REA-45) lets people who are not signed up generate
+the art too; the organizer switches it in the event form ("Geral") of the Hub admin. Only stored here:
+the bff exposes it and the frontend opens `/events/<slug>/arte`. Old rows hold NULL, read as false by
+the bff, and nothing filters on it, so no backfill migration is needed.
+
 ### Account setup (signup without login)
 `POST /api/account-setup` (`{ email, name?, phone? }` → `{ created, pending }`) is called only by the bff
 with the integration API token: the route has no `auth` config, so its derived scope
