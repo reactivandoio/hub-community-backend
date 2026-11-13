@@ -235,7 +235,8 @@ bff (`utils/auth`: `isEventOrganizer` accepts managers, `isEventOwner` does not)
 nor the list alone grants anything. `api::management-invite` (granted to no role; only the bff writes
 and reads it) is an e-mailed invite to organize a community (`kind` `community_organizer`, admin
 only) or manage an event (`event_manager`, admin or the event's community organizers): `email`,
-`token_hash` (sha256 of the link's token, unique, private — the token itself is never stored),
+`token_hash` (sha256 of the link's token, unique — the token itself is never stored; not `private`,
+because Strapi refuses filtering on private fields and the bff looks the invite up by it),
 `expires_at` (7 days), `accepted_at` / `accepted_by` (used once), `revoked_at`, `community` / `event`,
 `invited_by` / `invited_by_email`. The update guard refuses `communities` and `managed_events` for user
 JWTs, so nobody adds themselves to a community or an event through `PUT /api/users/:id` (until now

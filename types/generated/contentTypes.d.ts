@@ -1277,7 +1277,6 @@ export interface ApiManagementInviteManagementInvite
     revoked_at: Schema.Attribute.DateTime;
     token_hash: Schema.Attribute.String &
       Schema.Attribute.Required &
-      Schema.Attribute.Private &
       Schema.Attribute.Unique;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
