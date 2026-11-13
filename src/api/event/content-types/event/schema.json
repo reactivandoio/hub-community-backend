@@ -113,6 +113,12 @@
       "target": "api::certificate-config.certificate-config",
       "mappedBy": "event"
     },
+    "share_art_config": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::share-art-config.share-art-config",
+      "mappedBy": "event"
+    },
     "certificate_request_forms": {
       "type": "relation",
       "relation": "oneToMany",
