@@ -1410,7 +1410,7 @@ export interface ApiShareArtConfigShareArtConfig
   extends Struct.CollectionTypeSchema {
   collectionName: 'share_art_configs';
   info: {
-    description: 'Arte "eu vou" personalizada de um evento: fundo e \u00E1reas da foto, do nome e do papel por formato (9:16 e 4:5)';
+    description: 'Arte "eu vou" personalizada de um evento: fundo e \u00E1reas da foto, do nome e do papel por formato (9:16 e 4:5) e os pap\u00E9is oferecidos no gerador';
     displayName: 'Share Art Config';
     pluralName: 'share-art-configs';
     singularName: 'share-art-config';
@@ -1434,6 +1434,7 @@ export interface ApiShareArtConfigShareArtConfig
     > &
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
+    roles: Schema.Attribute.JSON;
     story_background: Schema.Attribute.Media<'images'>;
     story_name_text: Schema.Attribute.Component<'share-art.text-area', false>;
     story_photo_area: Schema.Attribute.Component<'share-art.photo-area', false>;

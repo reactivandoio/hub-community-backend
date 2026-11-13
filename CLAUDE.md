@@ -170,6 +170,11 @@ and the role they pick in the frontend's generator — nothing here maps a role.
 became 4:5 (1080×1350); a 1:1 feed background already saved stays in the database and the bff
 ignores it (default art) until a new one is saved.
 
+REA-49 adds `roles` (json, a list of role names): which of the generator's roles the participant
+may pick in "Seu papel no evento". Null (every row saved before) = all of them; the bff validates the
+names against its list, keeps that list's order and refuses an empty list while a format places the
+role text. Nothing is migrated.
+
 `Event.share_art_open` (boolean, default false — REA-45) lets people who are not signed up generate
 the art too; the organizer switches it in the event form ("Geral") of the Hub admin. Only stored here:
 the bff exposes it and the frontend opens `/events/<slug>/arte`. Old rows hold NULL, read as false by
