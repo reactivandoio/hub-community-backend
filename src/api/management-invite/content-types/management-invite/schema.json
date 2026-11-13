@@ -16,7 +16,7 @@
       "required": true
     },
     "email": { "type": "email", "required": true },
-    "token_hash": { "type": "string", "required": true, "unique": true, "private": true },
+    "token_hash": { "type": "string", "required": true, "unique": true },
     "expires_at": { "type": "datetime", "required": true },
     "accepted_at": { "type": "datetime" },
     "accepted_by": {

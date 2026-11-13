@@ -16,8 +16,12 @@ describe('management-invite schema', () => {
     expect(attrs.email).toMatchObject({ type: 'email', required: true });
   });
 
-  it('keeps only the hash of the token, unique and never returned by the API', () => {
-    expect(attrs.token_hash).toMatchObject({ type: 'string', required: true, unique: true, private: true });
+  // Not `private`: Strapi refuses filtering on a private field ("Invalid key token_hash"), and the
+  // bff finds the invite of a link by its hash. Nobody but the bff reads this collection (no role has
+  // it), and the field holds only the hash, never the token.
+  it('keeps only the hash of the token, unique, and filterable by the bff', () => {
+    expect(attrs.token_hash).toMatchObject({ type: 'string', required: true, unique: true });
+    expect(attrs.token_hash.private).toBeUndefined();
     expect(attrs.token).toBeUndefined();
   });
 
