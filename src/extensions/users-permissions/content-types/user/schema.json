@@ -72,6 +72,12 @@
       "target": "api::community.community",
       "mappedBy": "organizers"
     },
+    "managed_events": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::event.event",
+      "mappedBy": "managers"
+    },
     "agenda": {
       "type": "relation",
       "relation": "oneToMany",

@@ -23,6 +23,10 @@ export const PROTECTED_USER_FIELDS = [
   'age_review_status',
   'age_review_requested_at',
   'age_review_blocked_at',
+  // What the person manages in the Hub admin (REA-48): only the bff writes it, after an invite or
+  // the admin. Without this, a user could add themselves to any community or event.
+  'communities',
+  'managed_events',
 ] as const;
 
 export type UserUpdateCheck = {

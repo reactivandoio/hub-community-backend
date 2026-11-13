@@ -1,0 +1,45 @@
+{
+  "kind": "collectionType",
+  "collectionName": "management_invites",
+  "info": {
+    "singularName": "management-invite",
+    "pluralName": "management-invites",
+    "displayName": "Management Invite",
+    "description": "REA-48: convite por e-mail para organizar uma comunidade ou gerir um evento no admin do Hub. Só o bff lê e escreve (token de integração)."
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {},
+  "attributes": {
+    "kind": {
+      "type": "enumeration",
+      "enum": ["community_organizer", "event_manager"],
+      "required": true
+    },
+    "email": { "type": "email", "required": true },
+    "token_hash": { "type": "string", "required": true, "unique": true, "private": true },
+    "expires_at": { "type": "datetime", "required": true },
+    "accepted_at": { "type": "datetime" },
+    "accepted_by": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "revoked_at": { "type": "datetime" },
+    "community": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::community.community"
+    },
+    "event": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::event.event"
+    },
+    "invited_by": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "invited_by_email": { "type": "string" }
+  }
+}

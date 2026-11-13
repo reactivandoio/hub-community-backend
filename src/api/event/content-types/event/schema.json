@@ -138,6 +138,12 @@
     "share_art_open": {
       "type": "boolean",
       "default": false
+    },
+    "managers": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "managed_events"
     }
   }
 }
