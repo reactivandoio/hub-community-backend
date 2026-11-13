@@ -63,12 +63,69 @@ export interface FeedbackMealRating extends Struct.ComponentSchema {
   };
 }
 
+export interface ShareArtPhotoArea extends Struct.ComponentSchema {
+  collectionName: 'components_share_art_photo_areas';
+  info: {
+    description: '\u00C1rea da foto do participante na arte, em fra\u00E7\u00F5es da imagem de fundo (0 a 1); radius 0 = canto reto, 1 = c\u00EDrculo';
+    displayName: 'Photo Area';
+  };
+  attributes: {
+    height: Schema.Attribute.Float &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 1;
+          min: 0;
+        },
+        number
+      >;
+    radius: Schema.Attribute.Float &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 1;
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<0>;
+    width: Schema.Attribute.Float &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 1;
+          min: 0;
+        },
+        number
+      >;
+    x: Schema.Attribute.Float &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 1;
+          min: 0;
+        },
+        number
+      >;
+    y: Schema.Attribute.Float &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 1;
+          min: 0;
+        },
+        number
+      >;
+  };
+}
+
 declare module '@strapi/strapi' {
   export module Public {
     export interface ComponentSchemas {
       'certificate.signature': CertificateSignature;
       'certificate.sponsor': CertificateSponsor;
       'feedback.meal-rating': FeedbackMealRating;
+      'share-art.photo-area': ShareArtPhotoArea;
     }
   }
 }

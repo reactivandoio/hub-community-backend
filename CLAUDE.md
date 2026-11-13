@@ -41,6 +41,7 @@ src/
     certificate/        # Issued participation certificates (unique code, idempotent per event+CPF)
     certificate-config/ # Per-event certificate template (sponsors, signatures, text)
     certificate-request-form/ # Public per-category certificate request form of an event
+    share-art-config/   # Per-event custom "eu vou" art: background + photo area per format (REA-43)
     comment/        # Comments on events/talks/communities
     comment-reply/  # Threaded comment replies
     community/      # Communities with organizers, tags, events
@@ -93,7 +94,7 @@ async delete(documentId: string, params: any) {
   });
 }
 ```
-Entities WITHOUT soft delete: Agenda, Analytics-Event, Attendance, Certificate-Config, Comment, CommentReply, Event-Feedback, Link, Participant, Rate, Sw-Form, Tag, Team, Vote, Voting-Option, Voting-Session.
+Entities WITHOUT soft delete: Agenda, Analytics-Event, Attendance, Certificate-Config, Share-Art-Config, Comment, CommentReply, Event-Feedback, Link, Participant, Rate, Sw-Form, Tag, Team, Vote, Voting-Option, Voting-Session.
 
 ### Unlisted Events
 `Event.unlisted` (boolean, default false) hides an event from the public listings while keeping its
@@ -124,6 +125,17 @@ existed — so no backfill migration is needed. A `certificate-request-form` is 
 (`/certificado/solicitar/<slug>`) for one category of one event; its `slug` is generated from the
 event and the category by the service and is never regenerated on update, so a shared link keeps
 working when the title or category is edited.
+
+### Custom "eu vou" art (REA-43)
+`api::share-art-config` is one per event (`event` oneToOne, `Event.share_art_config` mappedBy), written
+and read only by the bff with the integration token (granted to no role). Per format — `story` (9:16)
+and `feed` (1:1) — it holds a background image (`<format>_background`) and the participant photo area
+(`<format>_photo_area`, component `share-art.photo-area`): `x`, `y`, `width`, `height` as fractions of
+the background (0–1, so the area does not depend on the image resolution) and `radius` from 0 (square
+corners) to 1 (circle when the area is square: radius = `radius` × half of the smaller side). They are
+`float` (double), not `decimal`: Strapi creates decimal columns as `decimal(10,2)`. The schema only
+bounds each number to 0–1; the bff checks that the area fits inside the image and that each background
+has its format's ratio. The art itself is drawn in the browser by hub-community-frontend.
 
 ### Account setup (signup without password)
 `POST /api/account-setup` (`{ email, name?, phone? }` → `{ created, token }`) is called only by the bff

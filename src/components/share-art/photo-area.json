@@ -1,0 +1,15 @@
+{
+  "collectionName": "components_share_art_photo_areas",
+  "info": {
+    "displayName": "Photo Area",
+    "description": "Área da foto do participante na arte, em frações da imagem de fundo (0 a 1); radius 0 = canto reto, 1 = círculo"
+  },
+  "options": {},
+  "attributes": {
+    "x": { "type": "float", "required": true, "min": 0, "max": 1 },
+    "y": { "type": "float", "required": true, "min": 0, "max": 1 },
+    "width": { "type": "float", "required": true, "min": 0, "max": 1 },
+    "height": { "type": "float", "required": true, "min": 0, "max": 1 },
+    "radius": { "type": "float", "required": true, "min": 0, "max": 1, "default": 0 }
+  }
+}
