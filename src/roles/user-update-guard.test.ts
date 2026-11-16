@@ -19,6 +19,10 @@ describe('userUpdateRefusal', () => {
       .toMatch(/blocked, confirmed/);
   });
 
+  it('refuses moving their own session revocation (REA-63)', () => {
+    expect(userUpdateRefusal({ ...jwt, paramId: 7, body: { sessions_revoked_at: null } })).toMatch(/sessions_revoked_at/);
+  });
+
   it('refuses linking themselves to a speaker (REA-53)', () => {
     expect(userUpdateRefusal({ ...jwt, paramId: 7, body: { speaker: 'abc' } })).toMatch(/speaker/);
   });

@@ -169,6 +169,9 @@
     },
     "age_review_blocked_at": {
       "type": "datetime"
+    },
+    "sessions_revoked_at": {
+      "type": "datetime"
     }
   }
 }

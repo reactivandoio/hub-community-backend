@@ -30,6 +30,8 @@ export const PROTECTED_USER_FIELDS = [
   // The speaker profile the account is (REA-53): linked by the admin in /admin/speakers or by the
   // bff when an account is created. Without this, a user could take over any speaker and its talks.
   'speaker',
+  // REA-63: tokens issued before it are refused (roles/session-revocation); only the bff sets it.
+  'sessions_revoked_at',
 ] as const;
 
 export type UserUpdateCheck = {
