@@ -2,9 +2,10 @@
  * Makes the users-permissions roles match src/roles/definitions — only by adding.
  *
  * `planRoles` (pure, tested) compares what exists with the definitions and returns the roles to
- * create and the permissions to grant. `ensureRoles` reads the database, plans and, unless
- * `dryRun`, applies. Running it again changes nothing, and it never deletes a role or a
- * permission nor changes anybody's role: the first admin is assigned by hand in the Strapi admin.
+ * create, the permissions to grant and the ones to revoke. `ensureRoles` reads the database, plans
+ * and, unless `dryRun`, applies. Running it again changes nothing. It never deletes a role nor
+ * changes anybody's role (the first admin is assigned by hand in the Strapi admin), and the only
+ * permissions it deletes are those in a role's `revoke` list (REA-56).
  * Logs carry only role types and action names.
  */
 
@@ -22,6 +23,7 @@ export type ExistingRole = { id: number; type: string; actions: string[] };
 export type RolesPlan = {
   createRoles: { type: string; name: string; description: string }[];
   grants: { type: string; actions: string[] }[];
+  revokes: { type: string; actions: string[] }[];
   missingPluginRoles: string[];
 };
 
@@ -30,7 +32,7 @@ export const planRoles = (
   definitions: readonly RoleDefinition[] = ROLE_DEFINITIONS,
 ): RolesPlan => {
   const byType = new Map(existing.map((role) => [role.type, role]));
-  const plan: RolesPlan = { createRoles: [], grants: [], missingPluginRoles: [] };
+  const plan: RolesPlan = { createRoles: [], grants: [], revokes: [], missingPluginRoles: [] };
 
   for (const def of definitions) {
     const role = byType.get(def.type);
@@ -43,8 +45,12 @@ export const planRoles = (
     }
     const inherited = def.inheritsFrom ? byType.get(def.inheritsFrom)?.actions ?? [] : [];
     const has = new Set(role?.actions ?? []);
-    const actions = [...new Set([...def.actions, ...inherited])].filter((action) => !has.has(action));
+    const revoked = new Set(def.revoke ?? []);
+    const actions = [...new Set([...def.actions, ...inherited])]
+      .filter((action) => !has.has(action) && !revoked.has(action));
     if (actions.length > 0) plan.grants.push({ type: def.type, actions });
+    const toRevoke = [...has].filter((action) => revoked.has(action));
+    if (toRevoke.length > 0) plan.revokes.push({ type: def.type, actions: toRevoke });
   }
 
   return plan;
@@ -57,6 +63,8 @@ export const describePlan = (plan: RolesPlan): string[] => {
   plan.createRoles.forEach((role) => lines.push(`Create role "${role.type}" (${role.name})`));
   plan.grants.forEach((grant) =>
     grant.actions.forEach((action) => lines.push(`Grant ${grant.type} permission: ${action}`)));
+  plan.revokes.forEach((revoke) =>
+    revoke.actions.forEach((action) => lines.push(`Revoke ${revoke.type} permission: ${action}`)));
   if (lines.length === 0) lines.push('Roles and permissions already up to date');
   return lines;
 };
@@ -105,6 +113,15 @@ export const ensureRoles = async (
       if (already) continue;
       await strapi.db.query(PERMISSION_UID).create({ data: { role: roleId, action } });
       strapi.log.info(`${prefix}Granted ${grant.type} permission: ${action}`);
+    }
+  }
+
+  // REA-56: reads of personal data, even when granted by hand.
+  for (const revoke of plan.revokes) {
+    const roleId = ids.get(revoke.type);
+    for (const action of revoke.actions) {
+      await strapi.db.query(PERMISSION_UID).deleteMany({ where: { role: roleId, action } });
+      strapi.log.info(`${prefix}Revoked ${revoke.type} permission: ${action}`);
     }
   }
 

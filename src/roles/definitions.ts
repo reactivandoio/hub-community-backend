@@ -2,8 +2,9 @@
  * The users-permissions roles of the Hub and the content-API actions each one holds.
  *
  * `ensureRoles` (./ensure-roles) applies this on every start: it creates the roles that are
- * missing and grants the actions a role lacks. It never removes a role, a permission or a
- * user's role, so a permission granted by hand in the Strapi admin survives.
+ * missing and grants the actions a role lacks. It never removes a role or a user's role, and
+ * the only permissions it removes are the ones in a role's `revoke` list (REA-56: reads of
+ * personal data); any other permission granted by hand in the Strapi admin survives.
  *
  * A user has exactly one role. `admin` and `community-manager` hold every action of
  * `authenticated` — the list below and whatever that role has in the database, such as the
@@ -22,7 +23,51 @@ export type RoleDefinition = {
   actions: readonly string[];
   /** Also holds every action this role has in the database (plugin defaults, grants by hand). */
   inheritsFrom?: string;
+  /**
+   * REA-56: actions this role must NOT hold, removed on every start even if granted by hand.
+   * Never inherited, never granted.
+   */
+  revoke?: readonly string[];
 };
+
+/**
+ * REA-56: reads that hand out other people's personal data (e-mail, phone, CPF, date of birth).
+ * Removing `find` also removes the relation from every populate (Strapi drops a relation whose
+ * target the caller cannot `find`): community.organizers, event.managers, event.participants,
+ * speaker.users_permissions_user, team.members... The BFF reads all of this with its API token,
+ * which does not depend on the roles.
+ */
+const read = (uid: string) => [`${uid}.find`, `${uid}.findOne`];
+
+export const PERSONAL_DATA_READS = [
+  'plugin::users-permissions.user.find',
+  'plugin::users-permissions.user.findOne',
+  'plugin::users-permissions.user.count',
+  ...read('api::participant.participant'),
+  ...read('api::sw-form.sw-form'),
+] as const;
+
+/** What an anonymous caller must never read: the above plus every collection of people's records. */
+export const PUBLIC_REVOKED_ACTIONS = [
+  ...PERSONAL_DATA_READS,
+  ...[
+    'agenda',
+    'ai-text-run',
+    'analytics-event',
+    'attendance',
+    'certificate',
+    'email-campaign',
+    'email-campaign-delivery',
+    'email-suppression',
+    'event-feedback',
+    'login-code',
+    'management-invite',
+    'rate',
+    'role-change',
+    'termhub-credential',
+    'vote',
+  ].flatMap((name) => read(`api::${name}.${name}`)),
+] as const;
 
 export const PUBLIC_ACTIONS = [
     // Events (read)
@@ -120,9 +165,7 @@ export const AUTHENTICATED_ACTIONS = [
     'api::comment.comment.create',
     'api::comment.comment.update',
     'api::comment.comment.delete',
-    // Participants (read + create)
-    'api::participant.participant.find',
-    'api::participant.participant.findOne',
+    // Participants (create; REA-56: reading them back is the BFF's, with its API token)
     'api::participant.participant.create',
     // Certificate request forms (full CRUD, admin surface)
     'api::certificate-request-form.certificate-request-form.find',
@@ -130,9 +173,6 @@ export const AUTHENTICATED_ACTIONS = [
     'api::certificate-request-form.certificate-request-form.create',
     'api::certificate-request-form.certificate-request-form.update',
     'api::certificate-request-form.certificate-request-form.delete',
-    // SW Form (read)
-    'api::sw-form.sw-form.find',
-    'api::sw-form.sw-form.findOne',
     // Upload (authenticated upload for cover images)
     'plugin::upload.content-api.upload',
     'plugin::upload.content-api.find',
@@ -154,12 +194,14 @@ export const ROLE_DEFINITIONS: readonly RoleDefinition[] = [
     name: 'Public',
     description: 'Default role given to unauthenticated user.',
     actions: PUBLIC_ACTIONS,
+    revoke: PUBLIC_REVOKED_ACTIONS,
   },
   {
     type: 'authenticated',
     name: 'Authenticated',
     description: 'Default role given to authenticated user.',
     actions: AUTHENTICATED_ACTIONS,
+    revoke: PERSONAL_DATA_READS,
   },
   {
     // REA-48: manages, in the Hub admin, only the events listed in `event.managers` for them.
@@ -168,6 +210,7 @@ export const ROLE_DEFINITIONS: readonly RoleDefinition[] = [
     description: 'Manages, in the Hub admin, only the events they were made manager of.',
     actions: AUTHENTICATED_ACTIONS,
     inheritsFrom: 'authenticated',
+    revoke: PERSONAL_DATA_READS,
   },
   {
     type: 'community-manager',
@@ -175,6 +218,7 @@ export const ROLE_DEFINITIONS: readonly RoleDefinition[] = [
     description: 'Manages, in the Hub admin, the communities they organize and their events.',
     actions: AUTHENTICATED_ACTIONS,
     inheritsFrom: 'authenticated',
+    revoke: PERSONAL_DATA_READS,
   },
   {
     type: 'admin',
@@ -182,6 +226,7 @@ export const ROLE_DEFINITIONS: readonly RoleDefinition[] = [
     description: 'Hub administrator: sees and does everything in the Hub admin and assigns roles.',
     actions: AUTHENTICATED_ACTIONS,
     inheritsFrom: 'authenticated',
+    revoke: PERSONAL_DATA_READS,
   },
 ];
 

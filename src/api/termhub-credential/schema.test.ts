@@ -40,7 +40,8 @@ describe('ai-text-run schema', () => {
 
 describe('roles', () => {
   it('grant neither collection to anyone (bff only)', () => {
-    const text = JSON.stringify(ROLE_DEFINITIONS);
+    // Only what is granted counts: REA-56 lists them in `revoke` to take away grants made by hand.
+    const text = JSON.stringify(ROLE_DEFINITIONS.map((role) => role.actions));
     expect(text).not.toContain('termhub-credential');
     expect(text).not.toContain('ai-text-run');
   });
