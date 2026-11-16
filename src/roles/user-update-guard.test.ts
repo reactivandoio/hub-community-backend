@@ -19,6 +19,10 @@ describe('userUpdateRefusal', () => {
       .toMatch(/blocked, confirmed/);
   });
 
+  it('refuses linking themselves to a speaker (REA-53)', () => {
+    expect(userUpdateRefusal({ ...jwt, paramId: 7, body: { speaker: 'abc' } })).toMatch(/speaker/);
+  });
+
   it('lets a user change their marketing opt-in but never its date (REA-29)', () => {
     expect(userUpdateRefusal({ ...jwt, paramId: 7, body: { marketing_opt_in: true } })).toBeNull();
     expect(userUpdateRefusal({ ...jwt, paramId: 7, body: { marketing_opt_in_at: '2020-01-01' } }))

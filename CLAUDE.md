@@ -253,6 +253,27 @@ because Strapi refuses filtering on private fields and the bff looks the invite 
 JWTs, so nobody adds themselves to a community or an event through `PUT /api/users/:id` (until now
 `communities` was not protected).
 
+### Speakers and accounts (REA-53)
+`Speaker.users_permissions_user` / `User.speaker` (oneToOne) is the account a speaker is. The bff
+links it when an account is created by login code (the speaker with the same e-mail, or a new one)
+and the admin links or unlinks it in `/admin/speakers`. The update guard refuses `speaker` for user
+JWTs, so nobody takes over a speaker (and its talks) through `PUT /api/users/:id`. Linking an old
+speaker to an account that already has the empty speaker of its first login joins that empty one
+into it (avatar and biography it lacks) and soft-deletes it; an account that is already a speaker
+with talks is refused. `/admin/speakers` shows how many speakers have no account and suggests links
+(same e-mail, or a name only one account has), which the admin confirms one by one.
+
+Medium term the speaker entity goes away and talks point at accounts. Planned steps:
+1. Link every speaker that can be linked (REA-53; new accounts are linked at their first login).
+2. Add `Talk.speaker_users` (manyToMany user) next to `Talk.speakers`; backfill it from each
+   speaker's account and have the bff write both on createTalk/updateTalk.
+3. Decide the speakers with talks and no account (`withoutAccountWithTalks` in the review): an
+   account by their e-mail, or a guest account without login.
+4. Move avatar, biography, highlight and socials to the user; the bff keeps answering the `Speaker`
+   shape (resolved from the user), so the frontend and old links keep working.
+5. The talk form picks accounts; `/admin/speakers` becomes the list of users who spoke.
+6. Drop `Talk.speakers` and `api::speaker`, keeping the speaker → user map for old `/speakers/:id` links.
+
 ### Age rules (REA-36)
 The Hub is 18+ only. Pure logic in `src/utils/age.ts` (age in São Paulo calendar days) and
 `src/utils/age-review.ts`, applied by the user db lifecycle in `bootstrap()`:

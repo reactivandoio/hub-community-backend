@@ -27,6 +27,9 @@ export const PROTECTED_USER_FIELDS = [
   // the admin. Without this, a user could add themselves to any community or event.
   'communities',
   'managed_events',
+  // The speaker profile the account is (REA-53): linked by the admin in /admin/speakers or by the
+  // bff when an account is created. Without this, a user could take over any speaker and its talks.
+  'speaker',
 ] as const;
 
 export type UserUpdateCheck = {
