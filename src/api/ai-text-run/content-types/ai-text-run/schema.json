@@ -1,0 +1,36 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ai_text_runs",
+  "info": {
+    "singularName": "ai-text-run",
+    "pluralName": "ai-text-runs",
+    "displayName": "AI Text Run",
+    "description": "REA-51: uma geração de texto de e-mail marketing por uma run do termhub (rascunho de assunto e mensagem; nada é enviado). Só o bff lê e escreve (token de integração)."
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {},
+  "attributes": {
+    "idempotency_key": { "type": "string", "required": true, "unique": true },
+    "run_id": { "type": "string" },
+    "user_id": { "type": "integer", "required": true },
+    "event_document_id": { "type": "string", "required": true },
+    "event_slug": { "type": "string" },
+    "campaign_type": {
+      "type": "enumeration",
+      "enum": ["invite", "share", "reminder"],
+      "required": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["queued", "running", "succeeded", "failed", "cancelled"],
+      "default": "queued",
+      "required": true
+    },
+    "subject": { "type": "string" },
+    "message": { "type": "text" },
+    "error_code": { "type": "string" },
+    "error_message": { "type": "string" },
+    "last_seq": { "type": "integer", "default": 0 },
+    "finished_at": { "type": "datetime" }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "kind": "collectionType",
+  "collectionName": "termhub_credentials",
+  "info": {
+    "singularName": "termhub-credential",
+    "pluralName": "termhub-credentials",
+    "displayName": "Termhub Credential",
+    "description": "REA-51: token pessoal do termhub (escopo runs) de um usuário do admin, criptografado pelo bff (AES-256-GCM, chave TERMHUB_TOKEN_KEY só no bff), e o projeto do termhub que ele usa. Só o bff lê e escreve (token de integração)."
+  },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {},
+  "attributes": {
+    "user_id": { "type": "integer", "required": true, "unique": true },
+    "user_email": { "type": "string" },
+    "token_ciphertext": { "type": "text", "required": true },
+    "token_hint": { "type": "string" },
+    "project": { "type": "string", "required": true },
+    "verified_at": { "type": "datetime" }
+  }
+}
