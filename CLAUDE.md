@@ -242,6 +242,14 @@ because Strapi refuses filtering on private fields and the bff looks the invite 
 JWTs, so nobody adds themselves to a community or an event through `PUT /api/users/:id` (until now
 `communities` was not protected).
 
+### Speakers and accounts (REA-53)
+`Speaker.users_permissions_user` / `User.speaker` (oneToOne) is the account a speaker is. The bff
+links it when an account is created by login code (the speaker with the same e-mail, or a new one)
+and the admin links or unlinks it in `/admin/speakers`. The update guard refuses `speaker` for user
+JWTs, so nobody takes over a speaker (and its talks) through `PUT /api/users/:id`. Medium term the
+speaker entity goes away and `Talk` points at users; this link is the bridge for that migration
+(plan in the bff CLAUDE.md, "Speakers and accounts").
+
 ### Age rules (REA-36)
 The Hub is 18+ only. Pure logic in `src/utils/age.ts` (age in São Paulo calendar days) and
 `src/utils/age-review.ts`, applied by the user db lifecycle in `bootstrap()`:
