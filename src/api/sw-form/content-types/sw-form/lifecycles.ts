@@ -1,3 +1,5 @@
+import { recordStrapiEmail, strapiDelivery } from '../../../../utils/email-log';
+
 export default {
   async afterCreate(event) {
     const { result } = event;
@@ -71,8 +73,9 @@ export default {
         };
     }
 
+    // REA-52: recorded in the e-mail history (and counted in the quota) like the bff's e-mails.
     try {
-      await strapi.plugin('email').service('email').send({
+      const sent = await strapi.plugin('email').service('email').send({
         from: `Pedro Goiania <${defaultFrom}>`,
         to: result.email,
         subject: content.subject,
@@ -94,10 +97,16 @@ export default {
         html: buildEmailHtml(result.name, content),
       });
 
+      await recordStrapiEmail(strapi, strapiDelivery({
+        kind: 'sw-form', to: result.email, subject: content.subject, result: sent,
+      }));
       strapi.log.info(
         `SW Form confirmation email sent to ${result.email} (${isVolunteer ? 'volunteer' : 'apadrinhamento'})`
       );
     } catch (error) {
+      await recordStrapiEmail(strapi, strapiDelivery({
+        kind: 'sw-form', to: result.email, subject: content.subject, error,
+      }));
       strapi.log.error(
         `Failed to send SW Form confirmation email to ${result.email}: ${error.message}`
       );

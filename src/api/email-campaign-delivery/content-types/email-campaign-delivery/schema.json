@@ -5,7 +5,7 @@
     "singularName": "email-campaign-delivery",
     "pluralName": "email-campaign-deliveries",
     "displayName": "Email Campaign Delivery",
-    "description": "One e-mail of a campaign to one person; `key` (campaign:email) is unique so nobody gets it twice \u2014 REA-29, bff only"
+    "description": "Every e-mail the Hub sends, one row each (REA-26/REA-52): campaigns (key campaign:email, unique, so nobody gets one twice), transactional e-mails (tx:...), the Strapi ones (strapi:...). Mailgun events update it by message_id. bff and Strapi only."
   },
   "options": {
     "draftAndPublish": false
@@ -40,6 +40,27 @@
     },
     "sent_at": {
       "type": "datetime"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "message_id": {
+      "type": "string"
+    },
+    "ref": {
+      "type": "string"
+    },
+    "last_event": {
+      "type": "string"
+    },
+    "last_event_at": {
+      "type": "datetime"
+    },
+    "events": {
+      "type": "json"
     }
   }
 }
