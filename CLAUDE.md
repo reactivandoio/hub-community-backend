@@ -192,6 +192,17 @@ cadastro" e-mail. `password_pending` now means "registration not finished: the e
 verified by a login code" (REA-22/REA-26); old accounts that created a password are already false.
 Pure logic lives in `services/account-setup-helpers.ts` (tested).
 
+### E-mail history (REA-52)
+`api::email-campaign-delivery` is the record of every e-mail the Hub sends, one row each: campaigns
+(`key` = `<campaign>:<email>`), transactional e-mails written by the bff (`tx:…`, `campaign_document_id`
+`transactional:<kind>`) and the ones Strapi sends itself — the Startup Weekend form
+(`sw-form` lifecycle) records `strapi:sw-form:<uuid>` through `src/utils/email-log.ts` (tested; never
+fails the send). Fields: `email`, `kind`, `subject`, `status` (sent = Mailgun took it / failed /
+sending), `error`, `sent_at`, `message_id` (Mailgun's Message-Id without `<>`), `ref`, and Mailgun's
+delivery events (`events` JSON timeline, `last_event`, `last_event_at`), written by the bff's webhook.
+`bootstrap()` adds indexes on `email` and `message_id`. bff and Strapi only (no role has it), hidden in
+the admin. The bff's daily/monthly quota counts these rows.
+
 ### Schema Validation
 All validation is declarative in `schema.json` files — not in code. Patterns include:
 - `required`, `unique`, `minLength`, `maxLength`, `min`, `max`
