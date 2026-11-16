@@ -39,4 +39,6 @@ export default [
   'strapi::session',
   'strapi::favicon',
   'strapi::public',
+  // REA-56: personal fields never leave a read that is not the BFF's (src/middlewares).
+  'global::hide-personal-data',
 ];

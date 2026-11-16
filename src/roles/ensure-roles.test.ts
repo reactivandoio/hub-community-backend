@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { AUTHENTICATED_ACTIONS, ROLE_DEFINITIONS } from './definitions';
+import { AUTHENTICATED_ACTIONS, PERSONAL_DATA_READS, PUBLIC_REVOKED_ACTIONS, ROLE_DEFINITIONS } from './definitions';
 import { describePlan, ensureRoles, planRoles } from './ensure-roles';
 
 const defs = [
@@ -45,7 +45,7 @@ describe('planRoles', () => {
       ],
       defs,
     );
-    expect(plan).toEqual({ createRoles: [], grants: [], missingPluginRoles: [] });
+    expect(plan).toEqual({ createRoles: [], grants: [], revokes: [], missingPluginRoles: [] });
     expect(describePlan(plan)).toEqual(['Roles and permissions already up to date']);
   });
 
@@ -95,6 +95,11 @@ const fakeStrapi = (roles: any[], permissions: any[]) => {
       permissions.push(data);
       return data;
     }),
+    deleteMany: vi.fn(async ({ where }) => {
+      for (let i = permissions.length - 1; i >= 0; i -= 1) {
+        if (permissions[i].role === where.role && permissions[i].action === where.action) permissions.splice(i, 1);
+      }
+    }),
   };
   return {
     log,
@@ -139,5 +144,67 @@ describe('ensureRoles', () => {
     expect(plan.createRoles).toEqual([]);
     expect(plan.grants).toEqual([]);
     expect(permissions.length).toBe(count);
+  });
+});
+
+// REA-56: in production the Public role read /api/users, /api/participants and /api/sw-forms (e-mail,
+// phone, CPF, date of birth of 619 accounts, 169 participants and 93 forms), and the populate of
+// community.organizers / event.managers / event.participants with it — permissions granted by hand.
+describe('REA-56: personal data reads are revoked', () => {
+  const USER_FIND = 'plugin::users-permissions.user.find';
+  const PARTICIPANT_FIND = 'api::participant.participant.find';
+  const SW_FORM_FIND = 'api::sw-form.sw-form.find';
+
+  it('the public role (anonymous) loses user, participant and sw-form reads granted by hand', async () => {
+    const roles = [{ id: 1, type: 'public' }, { id: 2, type: 'authenticated' }];
+    const permissions: any[] = [
+      { role: 1, action: 'api::community.community.find' },
+      { role: 1, action: USER_FIND },
+      { role: 1, action: 'plugin::users-permissions.user.findOne' },
+      { role: 1, action: PARTICIPANT_FIND },
+      { role: 1, action: SW_FORM_FIND },
+      { role: 1, action: 'api::sw-form.sw-form.create' },
+      { role: 2, action: USER_FIND },
+      { role: 2, action: PARTICIPANT_FIND },
+      { role: 2, action: 'plugin::users-permissions.user.me' },
+    ];
+    const strapi = fakeStrapi(roles, permissions);
+    await ensureRoles(strapi);
+
+    const actionsOf = (type: string) => {
+      const id = roles.find((r) => r.type === type)!.id;
+      return permissions.filter((p) => p.role === id).map((p) => p.action);
+    };
+    for (const type of ['public', 'authenticated', 'event-manager', 'community-manager', 'admin']) {
+      for (const action of PERSONAL_DATA_READS) expect(actionsOf(type), `${type} ${action}`).not.toContain(action);
+    }
+    // What the site and the forms need stays.
+    expect(actionsOf('public')).toEqual(expect.arrayContaining([
+      'api::community.community.find', 'api::sw-form.sw-form.create', 'api::participant.participant.create',
+    ]));
+    expect(actionsOf('authenticated')).toContain('plugin::users-permissions.user.me');
+    expect(strapi.log.info).toHaveBeenCalledWith(`[roles] Revoked public permission: ${USER_FIND}`);
+
+    // A second start finds nothing to do.
+    const plan = await ensureRoles(fakeStrapi(roles, permissions));
+    expect(plan.revokes).toEqual([]);
+    expect(plan.grants).toEqual([]);
+  });
+
+  it('no role definition grants an action it revokes, and the public role never gets a personal read', () => {
+    for (const def of ROLE_DEFINITIONS) {
+      for (const action of def.revoke ?? []) expect(def.actions, `${def.type} ${action}`).not.toContain(action);
+    }
+    const publicDef = ROLE_DEFINITIONS.find((d) => d.type === 'public')!;
+    expect(publicDef.revoke).toEqual(PUBLIC_REVOKED_ACTIONS);
+    expect(PUBLIC_REVOKED_ACTIONS).toEqual(expect.arrayContaining([USER_FIND, PARTICIPANT_FIND, SW_FORM_FIND]));
+  });
+
+  it('dry run lists the revokes', () => {
+    const plan = planRoles([
+      { id: 1, type: 'public', actions: [USER_FIND] },
+      { id: 2, type: 'authenticated', actions: [] },
+    ]);
+    expect(describePlan(plan)).toContain(`Revoke public permission: ${USER_FIND}`);
   });
 });
