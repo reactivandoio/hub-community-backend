@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   applyDateOfBirthRules,
-  blockDueAgeReviews,
   DateOfBirthError,
   dobRequestCutoff,
   dobRequestDeadline,
+  markDueAgeReviews,
   stampAdultDeclaration,
 } from './age-review';
 
@@ -59,9 +59,16 @@ describe('applyDateOfBirthRules', () => {
     ).toEqual({ date_of_birth: '1990-01-01', age_review_status: null, age_review_requested_at: null });
   });
 
+  it('takes an account pending update back to normal when the date arrives (REA-60)', () => {
+    expect(
+      applyDateOfBirthRules({ date_of_birth: '1990-01-01' }, { date_of_birth: null, age_review_status: 'dob_update_required' }, now),
+    ).toEqual({ date_of_birth: '1990-01-01', age_review_status: null, age_review_requested_at: null });
+  });
+
   it('keeps other review statuses', () => {
     const data = { date_of_birth: '1990-01-01' };
     expect(applyDateOfBirthRules(data, { date_of_birth: null, age_review_status: 'dob_blocked' }, now)).toBe(data);
+    expect(applyDateOfBirthRules(data, { date_of_birth: null, age_review_status: 'minor_blocked' }, now)).toBe(data);
   });
 });
 
@@ -72,20 +79,30 @@ describe('dob request deadline', () => {
   });
 });
 
-describe('blockDueAgeReviews', () => {
-  it('blocks every overdue request with the cutoff of 7 days ago', async () => {
-    const db = {
-      findDue: vi.fn().mockResolvedValue([{ id: 1 }, { id: 2 }]),
-      block: vi.fn().mockResolvedValue(undefined),
-    };
-    expect(await blockDueAgeReviews(db, now)).toBe(2);
+describe('markDueAgeReviews', () => {
+  const makeDb = (due: { id: number }[], legacy: { id: number }[] = []) => ({
+    findDue: vi.fn().mockResolvedValue(due),
+    findLegacyBlocked: vi.fn().mockResolvedValue(legacy),
+    update: vi.fn().mockResolvedValue(undefined),
+  });
+
+  it('marks every overdue request as pending update, without blocking', async () => {
+    const db = makeDb([{ id: 1 }, { id: 2 }]);
+    expect(await markDueAgeReviews(db, now)).toEqual({ pending: 2, unblocked: 0 });
     expect(db.findDue).toHaveBeenCalledWith(new Date('2026-11-05T15:00:00.000Z'));
-    expect(db.block).toHaveBeenCalledWith(1, { blocked: true, age_review_status: 'dob_blocked', age_review_blocked_at: now });
+    expect(db.update).toHaveBeenCalledWith(1, { age_review_status: 'dob_update_required' });
+    for (const [, data] of db.update.mock.calls) expect(data).not.toHaveProperty('blocked', true);
+  });
+
+  it('unblocks the accounts blocked by the old rule into pending update', async () => {
+    const db = makeDb([], [{ id: 7 }]);
+    expect(await markDueAgeReviews(db, now)).toEqual({ pending: 0, unblocked: 1 });
+    expect(db.update).toHaveBeenCalledWith(7, { blocked: false, age_review_status: 'dob_update_required', age_review_blocked_at: null });
   });
 
   it('does nothing when nobody is overdue', async () => {
-    const db = { findDue: vi.fn().mockResolvedValue([]), block: vi.fn() };
-    expect(await blockDueAgeReviews(db, now)).toBe(0);
-    expect(db.block).not.toHaveBeenCalled();
+    const db = makeDb([]);
+    expect(await markDueAgeReviews(db, now)).toEqual({ pending: 0, unblocked: 0 });
+    expect(db.update).not.toHaveBeenCalled();
   });
 });

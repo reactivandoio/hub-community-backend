@@ -159,6 +159,7 @@
       "type": "enumeration",
       "enum": [
         "dob_requested",
+        "dob_update_required",
         "dob_blocked",
         "minor_blocked"
       ]
