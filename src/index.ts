@@ -98,6 +98,23 @@ export default {
       strapi.log.warn('Could not define custom performance indexes, they might exist or table not ready: ' + err.message);
     }
 
+    // REA-52: the admin reads a person's e-mails by address, and Mailgun's webhook finds the row by
+    // message id. hasIndex is not portable, so a "already exists" error is simply ignored.
+    try {
+      const knex = strapi.db.connection;
+      if (await knex.schema.hasTable('email_campaign_deliveries')) {
+        for (const [column, name] of [['email', 'idx_email_delivery_email'], ['message_id', 'idx_email_delivery_message_id']]) {
+          if (await knex.schema.hasColumn('email_campaign_deliveries', column)) {
+            await knex.schema.alterTable('email_campaign_deliveries', (table) => {
+              table.index([column], name);
+            }).catch(() => {});
+          }
+        }
+      }
+    } catch (err) {
+      strapi.log.warn('Could not ensure e-mail delivery indexes: ' + err.message);
+    }
+
     const pluginStore = strapi.store({
       type: "plugin",
       name: "users-permissions",
