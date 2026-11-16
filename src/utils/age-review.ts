@@ -7,7 +7,7 @@
  * - Age review (the admin menu in /admin/usuarios): `age_review_status` is
  *     dob_requested        the e-mail asking for the date of birth was sent at `age_review_requested_at`;
  *                          if no date arrives in 7 days the account becomes `dob_update_required`
- *                          (`markDueAgeReviews`);
+ *                          (`markDueAgeReviews`), unless it is an admin (REA-10);
  *     dob_update_required  REA-60: "pendente de atualização". The account is NOT blocked: the person
  *                          still gets the login code, and the Hub makes them fill the date of birth
  *                          (18+) and the declaration before using the site;
@@ -75,8 +75,10 @@ export const dobRequestCutoff = (now: Date = new Date()) => new Date(now.getTime
 export const dobRequestDeadline = (requestedAt: Date | string) =>
   new Date(new Date(requestedAt).getTime() + DOB_REQUEST_DAYS * DAY_MS);
 
+type DueUser = { id: number | string; role?: { type?: string | null } | null };
+
 type Db = {
-  findDue: (cutoff: Date) => Promise<{ id: number | string }[]>;
+  findDue: (cutoff: Date) => Promise<DueUser[]>;
   findLegacyBlocked: () => Promise<{ id: number | string }[]>;
   update: (id: number | string, data: Record<string, unknown>) => Promise<unknown>;
 };
@@ -86,15 +88,28 @@ type Db = {
  * `dob_update_required` — never blocked. Accounts blocked by the REA-36 rule (`dob_blocked`) are
  * unblocked into the same status. Only accounts the admin e-mailed from the menu are ever
  * `dob_requested`. Returns how many accounts changed.
+ *
+ * REA-10: an admin account never enters the routine (it stays `dob_requested`): a request sent to
+ * oneself, or to every admin, must not put the admin — or every admin — behind the "update your
+ * data" gate. To review an admin, another admin demotes them first (setUserRole in the bff); the
+ * next run then marks them. The legacy unblock below only gives access back, so it applies to all.
  */
 export const markDueAgeReviews = async (db: Db, now: Date = new Date()) => {
   const due = await db.findDue(dobRequestCutoff(now));
+  let pending = 0;
+  let skippedAdmins = 0;
   for (const user of due) {
+    // REA-10: an admin never enters the routine (see the doc comment above).
+    if (user.role?.type === 'admin') {
+      skippedAdmins += 1;
+      continue;
+    }
     await db.update(user.id, { age_review_status: 'dob_update_required' });
+    pending += 1;
   }
   const legacy = await db.findLegacyBlocked();
   for (const user of legacy) {
     await db.update(user.id, { blocked: false, age_review_status: 'dob_update_required', age_review_blocked_at: null });
   }
-  return { pending: due.length, unblocked: legacy.length };
+  return { pending, unblocked: legacy.length, skippedAdmins };
 };

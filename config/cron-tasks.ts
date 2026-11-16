@@ -11,6 +11,7 @@ const USER_UID = 'plugin::users-permissions.user';
  * still logs in with the code and the Hub asks for the date before anything else. Accounts blocked
  * by the old rule (`dob_blocked`) are unblocked into the same status. Accounts the admin never
  * e-mailed are never `dob_requested`, so a deploy changes nobody by itself.
+ * Admin accounts never enter it (REA-10), so no admin ends up behind the "update your data" gate.
  * AGE_REVIEW_AUTO_BLOCK=false turns it off (name kept for the env files already deployed).
  */
 export default {
@@ -19,7 +20,7 @@ export default {
       if (process.env.AGE_REVIEW_AUTO_BLOCK === 'false') return;
       try {
         const users = strapi.db.query(USER_UID);
-        const { pending, unblocked } = await markDueAgeReviews({
+        const { pending, unblocked, skippedAdmins } = await markDueAgeReviews({
           findDue: (cutoff) =>
             users.findMany({
               where: {
@@ -28,12 +29,14 @@ export default {
                 date_of_birth: { $null: true },
               },
               select: ['id'],
+              populate: { role: { select: ['type'] } },
             }),
           findLegacyBlocked: () => users.findMany({ where: { age_review_status: 'dob_blocked' }, select: ['id'] }),
           update: (id, data) => users.update({ where: { id }, data }),
         });
         if (pending > 0) strapi.log.info(`[age-review] ${pending} account(s) pending update: no date of birth 7 days after the request`);
         if (unblocked > 0) strapi.log.info(`[age-review] ${unblocked} account(s) blocked for no date of birth unblocked, now pending update`);
+        if (skippedAdmins > 0) strapi.log.warn(`[age-review] ${skippedAdmins} admin account(s) past the deadline left as they are (REA-10): demote them first`);
       } catch (err: any) {
         strapi.log.error('[age-review] pending-update task failed: ' + err?.message);
       }

@@ -311,7 +311,8 @@ The Hub is 18+ only. Pure logic in `src/utils/age.ts` (age in São Paulo calenda
   blocked — they still get the login code and the Hub makes them fill the date (18+) and the
   declaration first. It also unblocks any legacy `dob_blocked` account into that status. Only
   `minor_blocked` accounts are blocked for real (no login code). Only accounts the admin e-mailed
-  are ever `dob_requested`, so a deploy changes nobody. `AGE_REVIEW_AUTO_BLOCK=false` turns it off.
+  are ever `dob_requested`, so a deploy changes nobody. Admin accounts never enter it (REA-10): they
+  stay `dob_requested` until another admin demotes them. `AGE_REVIEW_AUTO_BLOCK=false` turns it off.
   All these fields are refused by the update guard for user JWTs.
 
 ### Bootstrap

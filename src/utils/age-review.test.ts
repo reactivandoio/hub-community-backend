@@ -80,7 +80,7 @@ describe('dob request deadline', () => {
 });
 
 describe('markDueAgeReviews', () => {
-  const makeDb = (due: { id: number }[], legacy: { id: number }[] = []) => ({
+  const makeDb = (due: { id: number; role?: { type: string } | null }[], legacy: { id: number }[] = []) => ({
     findDue: vi.fn().mockResolvedValue(due),
     findLegacyBlocked: vi.fn().mockResolvedValue(legacy),
     update: vi.fn().mockResolvedValue(undefined),
@@ -88,7 +88,7 @@ describe('markDueAgeReviews', () => {
 
   it('marks every overdue request as pending update, without blocking', async () => {
     const db = makeDb([{ id: 1 }, { id: 2 }]);
-    expect(await markDueAgeReviews(db, now)).toEqual({ pending: 2, unblocked: 0 });
+    expect(await markDueAgeReviews(db, now)).toEqual({ pending: 2, unblocked: 0, skippedAdmins: 0 });
     expect(db.findDue).toHaveBeenCalledWith(new Date('2026-11-05T15:00:00.000Z'));
     expect(db.update).toHaveBeenCalledWith(1, { age_review_status: 'dob_update_required' });
     for (const [, data] of db.update.mock.calls) expect(data).not.toHaveProperty('blocked', true);
@@ -96,13 +96,30 @@ describe('markDueAgeReviews', () => {
 
   it('unblocks the accounts blocked by the old rule into pending update', async () => {
     const db = makeDb([], [{ id: 7 }]);
-    expect(await markDueAgeReviews(db, now)).toEqual({ pending: 0, unblocked: 1 });
+    expect(await markDueAgeReviews(db, now)).toEqual({ pending: 0, unblocked: 1, skippedAdmins: 0 });
     expect(db.update).toHaveBeenCalledWith(7, { blocked: false, age_review_status: 'dob_update_required', age_review_blocked_at: null });
+  });
+
+  // REA-10: an admin must never end up behind the "update your data" gate because of a request
+  // sent to themselves or to every admin. Demote first, then review.
+  it('never puts an admin in the routine; everybody else becomes pending update', async () => {
+    const db = makeDb([
+      { id: 1, role: { type: 'admin' } },
+      { id: 2, role: { type: 'authenticated' } },
+      { id: 3, role: null },
+      { id: 4, role: { type: 'community-manager' } },
+    ]);
+    expect(await markDueAgeReviews(db, now)).toEqual({ pending: 3, unblocked: 0, skippedAdmins: 1 });
+    expect(db.update.mock.calls).toEqual([
+      [2, { age_review_status: 'dob_update_required' }],
+      [3, { age_review_status: 'dob_update_required' }],
+      [4, { age_review_status: 'dob_update_required' }],
+    ]);
   });
 
   it('does nothing when nobody is overdue', async () => {
     const db = makeDb([]);
-    expect(await markDueAgeReviews(db, now)).toEqual({ pending: 0, unblocked: 0 });
+    expect(await markDueAgeReviews(db, now)).toEqual({ pending: 0, unblocked: 0, skippedAdmins: 0 });
     expect(db.update).not.toHaveBeenCalled();
   });
 });
