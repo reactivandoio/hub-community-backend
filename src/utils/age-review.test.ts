@@ -78,14 +78,30 @@ describe('blockDueAgeReviews', () => {
       findDue: vi.fn().mockResolvedValue([{ id: 1 }, { id: 2 }]),
       block: vi.fn().mockResolvedValue(undefined),
     };
-    expect(await blockDueAgeReviews(db, now)).toBe(2);
+    expect(await blockDueAgeReviews(db, now)).toEqual({ blocked: 2, skippedAdmins: 0 });
     expect(db.findDue).toHaveBeenCalledWith(new Date('2026-11-05T15:00:00.000Z'));
     expect(db.block).toHaveBeenCalledWith(1, { blocked: true, age_review_status: 'dob_blocked', age_review_blocked_at: now });
   });
 
   it('does nothing when nobody is overdue', async () => {
     const db = { findDue: vi.fn().mockResolvedValue([]), block: vi.fn() };
-    expect(await blockDueAgeReviews(db, now)).toBe(0);
+    expect(await blockDueAgeReviews(db, now)).toEqual({ blocked: 0, skippedAdmins: 0 });
     expect(db.block).not.toHaveBeenCalled();
+  });
+
+  // REA-10: an admin must never lose access, nor the system run out of admins, because of a
+  // date-of-birth request (one asked of themselves, or of every admin). Demote first, then block.
+  it('never blocks an admin account', async () => {
+    const db = {
+      findDue: vi.fn().mockResolvedValue([
+        { id: 1, role: { type: 'admin' } },
+        { id: 2, role: { type: 'authenticated' } },
+        { id: 3, role: null },
+        { id: 4, role: { type: 'community-manager' } },
+      ]),
+      block: vi.fn().mockResolvedValue(undefined),
+    };
+    expect(await blockDueAgeReviews(db, now)).toEqual({ blocked: 3, skippedAdmins: 1 });
+    expect(db.block.mock.calls.map(([id]) => id)).toEqual([2, 3, 4]);
   });
 });

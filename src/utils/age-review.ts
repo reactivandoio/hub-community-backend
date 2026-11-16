@@ -6,7 +6,8 @@
  * - `date_of_birth`, when given, must be a valid date of someone aged 18 or more.
  * - Age review (the admin menu in /admin/usuarios): `age_review_status` is
  *     dob_requested  the e-mail asking for the date of birth was sent at `age_review_requested_at`;
- *                    if no date arrives in 7 days the account is blocked (`blockDueAgeReviews`);
+ *                    if no date arrives in 7 days the account is blocked (`blockDueAgeReviews`),
+ *                    unless it is an admin (REA-10);
  *     dob_blocked    blocked because the date never came;
  *     minor_blocked  blocked by the admin because the date of birth is under 18.
  *   A valid date of birth sent while `dob_requested` ends the review (status and date cleared), so
@@ -66,20 +67,33 @@ export const dobRequestCutoff = (now: Date = new Date()) => new Date(now.getTime
 export const dobRequestDeadline = (requestedAt: Date | string) =>
   new Date(new Date(requestedAt).getTime() + DOB_REQUEST_DAYS * DAY_MS);
 
+type DueUser = { id: number | string; role?: { type?: string | null } | null };
+
 type Db = {
-  findDue: (cutoff: Date) => Promise<{ id: number | string }[]>;
+  findDue: (cutoff: Date) => Promise<DueUser[]>;
   block: (id: number | string, data: Record<string, unknown>) => Promise<unknown>;
 };
 
 /**
  * Blocks the accounts whose date-of-birth request is older than 7 days and still unanswered.
  * Only accounts the admin e-mailed from the menu are ever `dob_requested`, so nothing is blocked
- * by a deploy on its own. Returns how many were blocked.
+ * by a deploy on its own.
+ *
+ * REA-10: an admin account is never blocked here — a request sent to oneself, or to every admin,
+ * would otherwise lock the admin out or leave the system without an admin. To block an admin,
+ * another admin demotes them first (setUserRole in the bff); the next run then blocks them.
  */
 export const blockDueAgeReviews = async (db: Db, now: Date = new Date()) => {
   const due = await db.findDue(dobRequestCutoff(now));
+  let blocked = 0;
+  let skippedAdmins = 0;
   for (const user of due) {
+    if (user.role?.type === 'admin') {
+      skippedAdmins += 1;
+      continue;
+    }
     await db.block(user.id, { blocked: true, age_review_status: 'dob_blocked', age_review_blocked_at: now });
+    blocked += 1;
   }
-  return due.length;
+  return { blocked, skippedAdmins };
 };
