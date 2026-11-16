@@ -772,7 +772,7 @@ export interface ApiEmailCampaignDeliveryEmailCampaignDelivery
   extends Struct.CollectionTypeSchema {
   collectionName: 'email_campaign_deliveries';
   info: {
-    description: 'One e-mail of a campaign to one person; `key` (campaign:email) is unique so nobody gets it twice \u2014 REA-29, bff only';
+    description: 'Every e-mail the Hub sends, one row each (REA-26/REA-52): campaigns (key campaign:email, unique, so nobody gets one twice), transactional e-mails (tx:...), the Strapi ones (strapi:...). Mailgun events update it by message_id. bff and Strapi only.';
     displayName: 'Email Campaign Delivery';
     pluralName: 'email-campaign-deliveries';
     singularName: 'email-campaign-delivery';
@@ -787,20 +787,27 @@ export interface ApiEmailCampaignDeliveryEmailCampaignDelivery
       Schema.Attribute.Private;
     email: Schema.Attribute.String & Schema.Attribute.Required;
     error: Schema.Attribute.Text;
+    events: Schema.Attribute.JSON;
     key: Schema.Attribute.String &
       Schema.Attribute.Required &
       Schema.Attribute.Unique;
+    kind: Schema.Attribute.String;
+    last_event: Schema.Attribute.String;
+    last_event_at: Schema.Attribute.DateTime;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
       'api::email-campaign-delivery.email-campaign-delivery'
     > &
       Schema.Attribute.Private;
+    message_id: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;
+    ref: Schema.Attribute.String;
     sent_at: Schema.Attribute.DateTime;
     status: Schema.Attribute.Enumeration<['sending', 'sent', 'failed']> &
       Schema.Attribute.Required &
       Schema.Attribute.DefaultTo<'sending'>;
+    subject: Schema.Attribute.String;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -1224,6 +1231,49 @@ export interface ApiLocationLocation extends Struct.CollectionTypeSchema {
     publishedAt: Schema.Attribute.DateTime;
     region: Schema.Attribute.String;
     title: Schema.Attribute.String;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiLoginCodeLoginCode extends Struct.CollectionTypeSchema {
+  collectionName: 'login_codes';
+  info: {
+    description: "REA-26: one login code sent to an e-mail (only its HMAC is stored). Written and read by the bff's /login-code routes only";
+    displayName: 'Login Code';
+    pluralName: 'login-codes';
+    singularName: 'login-code';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    attempts: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    code_hash: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Private;
+    consumed_at: Schema.Attribute.DateTime;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    email: Schema.Attribute.String & Schema.Attribute.Required;
+    expires_at: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::login-code.login-code'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -2308,6 +2358,7 @@ declare module '@strapi/strapi' {
       'api::event.event': ApiEventEvent;
       'api::link.link': ApiLinkLink;
       'api::location.location': ApiLocationLocation;
+      'api::login-code.login-code': ApiLoginCodeLoginCode;
       'api::management-invite.management-invite': ApiManagementInviteManagementInvite;
       'api::participant.participant': ApiParticipantParticipant;
       'api::rate.rate': ApiRateRate;
