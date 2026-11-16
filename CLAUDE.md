@@ -37,6 +37,8 @@ src/
     account-setup/      # POST /api/account-setup — bff-only (API token), no content type
     login-code/         # REA-26: login by a code e-mailed — POST /api/login-code/{request,verify}, bff-only
     management-invite/  # REA-48: e-mailed invites to organize a community or manage an event, bff-only
+    termhub-credential/ # REA-51: each admin user's termhub token (encrypted by the bff) + termhub project, bff-only
+    ai-text-run/        # REA-51: AI drafts of e-mail campaign texts (one termhub run each), bff-only
     agenda/         # User event agendas
     analytics-event/    # Tracking events
     attendance/         # Lista de presença (user × event)
@@ -226,6 +228,17 @@ The same goes for the e-mail marketing collections (REA-29): `email-campaign`, `
 check in the plugin; `register()` wraps it with `roles/user-update-guard`: with a user JWT only the
 user's own record, and never `role`, `blocked`, `confirmed`, `provider`, tokens or `password_pending`.
 API-token requests (the bff) are unchanged.
+
+### AI texts for e-mail campaigns (REA-51)
+`api::termhub-credential` (one per user, `user_id` unique) holds the user's personal termhub token
+(scope `runs`) only as `token_ciphertext` — AES-256-GCM made by the bff with `TERMHUB_TOKEN_KEY`, a
+key that exists only in the bff, so a copy of this database does not open it — plus `token_hint`
+(last 4 characters, for the screen), the termhub `project` and `verified_at`. `api::ai-text-run` is one
+draft generation: `idempotency_key` (unique, sent to termhub), `run_id`, `user_id`, the event, the
+`campaign_type`, the run `status` (queued/running/succeeded/failed/cancelled), the drafted
+`subject`/`message`, `error_code`/`error_message` and `last_seq` (SSE resume point). Both are granted
+to no role; the bff reads and writes them with the integration token. Nothing here talks to termhub
+nor sends e-mail: the draft goes to the admin's form, who edits it and starts the campaign.
 
 ### Organizers, event managers and invites (REA-48)
 `Event.managers` (manyToMany users, `User.managed_events` mappedBy) lists who manages one event in

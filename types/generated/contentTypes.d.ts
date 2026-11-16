@@ -408,6 +408,54 @@ export interface ApiAgendaAgenda extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiAiTextRunAiTextRun extends Struct.CollectionTypeSchema {
+  collectionName: 'ai_text_runs';
+  info: {
+    description: 'REA-51: uma gera\u00E7\u00E3o de texto de e-mail marketing por uma run do termhub (rascunho de assunto e mensagem; nada \u00E9 enviado). S\u00F3 o bff l\u00EA e escreve (token de integra\u00E7\u00E3o).';
+    displayName: 'AI Text Run';
+    pluralName: 'ai-text-runs';
+    singularName: 'ai-text-run';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    campaign_type: Schema.Attribute.Enumeration<['invite', 'share', 'reminder']> &
+      Schema.Attribute.Required;
+    error_code: Schema.Attribute.String;
+    error_message: Schema.Attribute.String;
+    event_document_id: Schema.Attribute.String & Schema.Attribute.Required;
+    event_slug: Schema.Attribute.String;
+    finished_at: Schema.Attribute.DateTime;
+    idempotency_key: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    last_seq: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    message: Schema.Attribute.Text;
+    run_id: Schema.Attribute.String;
+    status: Schema.Attribute.Enumeration<
+      ['queued', 'running', 'succeeded', 'failed', 'cancelled']
+    > &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'queued'>;
+    subject: Schema.Attribute.String;
+    user_id: Schema.Attribute.Integer & Schema.Attribute.Required;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::ai-text-run.ai-text-run'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiAnalyticsEventAnalyticsEvent
   extends Struct.CollectionTypeSchema {
   collectionName: 'analytics_events';
@@ -1634,6 +1682,42 @@ export interface ApiTeamTeam extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiTermhubCredentialTermhubCredential
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'termhub_credentials';
+  info: {
+    description: 'REA-51: token pessoal do termhub (escopo runs) de um usu\u00E1rio do admin, criptografado pelo bff (AES-256-GCM, chave TERMHUB_TOKEN_KEY s\u00F3 no bff), e o projeto do termhub que ele usa. S\u00F3 o bff l\u00EA e escreve (token de integra\u00E7\u00E3o).';
+    displayName: 'Termhub Credential';
+    pluralName: 'termhub-credentials';
+    singularName: 'termhub-credential';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    project: Schema.Attribute.String & Schema.Attribute.Required;
+    token_ciphertext: Schema.Attribute.Text & Schema.Attribute.Required;
+    token_hint: Schema.Attribute.String;
+    user_email: Schema.Attribute.String;
+    user_id: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::termhub-credential.termhub-credential'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiVoteVote extends Struct.CollectionTypeSchema {
   collectionName: 'votes';
   info: {
@@ -2293,6 +2377,7 @@ declare module '@strapi/strapi' {
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
       'api::agenda.agenda': ApiAgendaAgenda;
+      'api::ai-text-run.ai-text-run': ApiAiTextRunAiTextRun;
       'api::analytics-event.analytics-event': ApiAnalyticsEventAnalyticsEvent;
       'api::attendance.attendance': ApiAttendanceAttendance;
       'api::certificate-config.certificate-config': ApiCertificateConfigCertificateConfig;
@@ -2318,6 +2403,7 @@ declare module '@strapi/strapi' {
       'api::tag.tag': ApiTagTag;
       'api::talk.talk': ApiTalkTalk;
       'api::team.team': ApiTeamTeam;
+      'api::termhub-credential.termhub-credential': ApiTermhubCredentialTermhubCredential;
       'api::vote.vote': ApiVoteVote;
       'api::voting-option.voting-option': ApiVotingOptionVotingOption;
       'api::voting-session.voting-session': ApiVotingSessionVotingSession;
