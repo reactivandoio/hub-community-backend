@@ -5,17 +5,26 @@
  *   `adult_declaration_at` becomes now (declared) or null (taken back), like the marketing opt-in.
  * - `date_of_birth`, when given, must be a valid date of someone aged 18 or more.
  * - Age review (the admin menu in /admin/usuarios): `age_review_status` is
- *     dob_requested  the e-mail asking for the date of birth was sent at `age_review_requested_at`;
- *                    if no date arrives in 7 days the account is blocked (`blockDueAgeReviews`);
- *     dob_blocked    blocked because the date never came;
- *     minor_blocked  blocked by the admin because the date of birth is under 18.
- *   A valid date of birth sent while `dob_requested` ends the review (status and date cleared), so
- *   the account is never blocked after the person answers.
+ *     dob_requested        the e-mail asking for the date of birth was sent at `age_review_requested_at`;
+ *                          if no date arrives in 7 days the account becomes `dob_update_required`
+ *                          (`markDueAgeReviews`);
+ *     dob_update_required  REA-60: "pendente de atualização". The account is NOT blocked: the person
+ *                          still gets the login code, and the Hub makes them fill the date of birth
+ *                          (18+) and the declaration before using the site;
+ *     dob_blocked          legacy (REA-36): blocked because the date never came. The cron turns any
+ *                          such account into `dob_update_required` and unblocks it;
+ *     minor_blocked        blocked by the admin because the date of birth is under 18. Stays
+ *                          blocked for real: no login code, no session.
+ *   A valid date of birth sent while the date is being asked for ends the review (status and date
+ *   cleared), so the account goes back to normal.
  */
 
 import { dateOfBirthRefusal } from './age';
 
-export const AGE_REVIEW_STATUSES = ['dob_requested', 'dob_blocked', 'minor_blocked'] as const;
+export const AGE_REVIEW_STATUSES = ['dob_requested', 'dob_update_required', 'dob_blocked', 'minor_blocked'] as const;
+
+/** Statuses that a valid date of birth ends. */
+const ASKING_FOR_DATE = new Set(['dob_requested', 'dob_update_required']);
 export type AgeReviewStatus = (typeof AGE_REVIEW_STATUSES)[number];
 
 export const DOB_REQUEST_DAYS = 7;
@@ -53,7 +62,7 @@ export const applyDateOfBirthRules = <T extends Record<string, unknown>>(
   const refusal = dateOfBirthRefusal(data.date_of_birth, now);
   if (refusal) throw new DateOfBirthError(refusal);
 
-  if (current?.age_review_status === 'dob_requested' && !('age_review_status' in data)) {
+  if (current?.age_review_status && ASKING_FOR_DATE.has(current.age_review_status) && !('age_review_status' in data)) {
     return { ...data, age_review_status: null, age_review_requested_at: null };
   }
   return data;
@@ -68,18 +77,24 @@ export const dobRequestDeadline = (requestedAt: Date | string) =>
 
 type Db = {
   findDue: (cutoff: Date) => Promise<{ id: number | string }[]>;
-  block: (id: number | string, data: Record<string, unknown>) => Promise<unknown>;
+  findLegacyBlocked: () => Promise<{ id: number | string }[]>;
+  update: (id: number | string, data: Record<string, unknown>) => Promise<unknown>;
 };
 
 /**
- * Blocks the accounts whose date-of-birth request is older than 7 days and still unanswered.
- * Only accounts the admin e-mailed from the menu are ever `dob_requested`, so nothing is blocked
- * by a deploy on its own. Returns how many were blocked.
+ * REA-60: the accounts whose date-of-birth request is older than 7 days and still unanswered become
+ * `dob_update_required` — never blocked. Accounts blocked by the REA-36 rule (`dob_blocked`) are
+ * unblocked into the same status. Only accounts the admin e-mailed from the menu are ever
+ * `dob_requested`. Returns how many accounts changed.
  */
-export const blockDueAgeReviews = async (db: Db, now: Date = new Date()) => {
+export const markDueAgeReviews = async (db: Db, now: Date = new Date()) => {
   const due = await db.findDue(dobRequestCutoff(now));
   for (const user of due) {
-    await db.block(user.id, { blocked: true, age_review_status: 'dob_blocked', age_review_blocked_at: now });
+    await db.update(user.id, { age_review_status: 'dob_update_required' });
   }
-  return due.length;
+  const legacy = await db.findLegacyBlocked();
+  for (const user of legacy) {
+    await db.update(user.id, { blocked: false, age_review_status: 'dob_update_required', age_review_blocked_at: null });
+  }
+  return { pending: due.length, unblocked: legacy.length };
 };
