@@ -65,6 +65,7 @@ export const PUBLIC_REVOKED_ACTIONS = [
     'rate',
     'role-change',
     'termhub-credential',
+    'user-change',
     'vote',
   ].flatMap((name) => read(`api::${name}.${name}`)),
 ] as const;

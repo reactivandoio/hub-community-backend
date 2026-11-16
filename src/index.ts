@@ -4,6 +4,7 @@ import { ensureRoles } from './roles/ensure-roles';
 import { applyInitialAssignments } from './roles/initial-assignments';
 import { wrapUserUpdate } from './roles/user-update-guard';
 import { closePasswordLogin } from './roles/password-login-guard';
+import { guardRevokedSessions } from './roles/session-revocation';
 import { stampOptIn } from './utils/marketing-opt-in';
 import { applyDateOfBirthRules, DateOfBirthError, stampAdultDeclaration } from './utils/age-review';
 import { errors } from '@strapi/utils';
@@ -167,6 +168,16 @@ export default {
     // REA-46: no password in the Hub (login by e-mail code, REA-26). /auth/local, the signup and
     // the forgot/reset/change-password routes answer 404 — see roles/password-login-guard
     closePasswordLogin(originalController);
+
+    // REA-63: a JWT issued before the user's sessions_revoked_at is anonymous (the admin changed the
+    // e-mail) — see roles/session-revocation. The bff checks the same.
+    guardRevokedSessions(strapi.plugin("users-permissions").service("jwt"), async (id) => {
+      const user = await strapi.db.query(USER_UID).findOne({
+        where: { id },
+        select: ["sessions_revoked_at"],
+      });
+      return user?.sessions_revoked_at ?? null;
+    });
   },
 };
 

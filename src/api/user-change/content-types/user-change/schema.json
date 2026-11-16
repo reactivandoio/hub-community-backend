@@ -1,0 +1,38 @@
+{
+  "kind": "collectionType",
+  "collectionName": "user_changes",
+  "info": {
+    "singularName": "user-change",
+    "pluralName": "user-changes",
+    "displayName": "User Change",
+    "description": "REA-63: audit trail of the account data the Hub admin corrected (written by the bff only). Keeps who, whom, when and which fields — never the values."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "actor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "target": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "fields": {
+      "type": "json",
+      "required": true
+    },
+    "signups_moved": {
+      "type": "integer",
+      "default": 0
+    },
+    "sessions_revoked": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

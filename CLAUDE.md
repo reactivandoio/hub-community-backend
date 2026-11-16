@@ -230,6 +230,12 @@ applied e-mails and the organizers step are remembered in the plugin store `hub-
 changed later in the Hub admin is not undone by a restart; it never creates accounts nor demotes, and
 each change is written to `role-change` with actor "migration". Logs mask e-mails.
 `api::role-change` is granted to no role; only the bff (full-access API token) writes and reads it.
+REA-63: the admin corrects a user's account data from the Hub admin (the bff's `adminUpdateUser`).
+Each correction is written to `api::user-change` (actor, target, the names of the changed fields,
+signups moved, whether sessions ended — never the values), granted to no role like `role-change`.
+Changing the e-mail stamps the user's `sessions_revoked_at` (protected field): a JWT issued before it
+is anonymous, like an expired one — `src/roles/session-revocation.ts` wraps the users-permissions
+`jwt.getToken` in `register()`, and the bff's `utils/auth` checks the same.
 The same goes for the e-mail marketing collections (REA-29): `email-campaign`, `email-campaign-delivery`
 (`key` = `<campaign documentId>:<email>`, unique, so nobody gets a campaign twice) and
 `email-suppression` (unsubscribed e-mails, never sent a campaign). The user has `marketing_opt_in`
