@@ -297,11 +297,16 @@ The Hub is 18+ only. Pure logic in `src/utils/age.ts` (age in São Paulo calenda
   or the write answers 400 `ValidationError`. A date equal to the stored one is not re-checked, so
   old records stay editable.
 - Age review, driven from the Hub admin (`/admin/usuarios`, bff): `age_review_status`
-  `dob_requested` (e-mail asking for the date sent at `age_review_requested_at`), `dob_blocked`,
-  `minor_blocked`, plus `age_review_blocked_at`. A valid date sent while `dob_requested` clears the
-  request. `config/cron-tasks.ts` (`ageReviewBlock`, hourly) blocks (`blocked: true`) the accounts
-  still without a date 7 days after the e-mail; only accounts the admin e-mailed are ever
-  `dob_requested`, so a deploy blocks nobody. `AGE_REVIEW_AUTO_BLOCK=false` turns it off.
+  `dob_requested` (e-mail asking for the date sent at `age_review_requested_at`),
+  `dob_update_required`, `dob_blocked` (legacy), `minor_blocked`, plus `age_review_blocked_at`.
+  A valid date sent while `dob_requested` or `dob_update_required` clears the request.
+  `config/cron-tasks.ts` (`ageReviewBlock`, hourly) turns the accounts still without a date 7 days
+  after the e-mail into `dob_update_required` ("pendente de atualização", REA-60): they are NOT
+  blocked — they still get the login code and the Hub makes them fill the date (18+) and the
+  declaration first. It also unblocks any legacy `dob_blocked` account into that status. Only
+  `minor_blocked` accounts are blocked for real (no login code). Only accounts the admin e-mailed
+  are ever `dob_requested`, so a deploy changes nobody. Admin accounts never enter it (REA-10): they
+  stay `dob_requested` until another admin demotes them. `AGE_REVIEW_AUTO_BLOCK=false` turns it off.
   All these fields are refused by the update guard for user JWTs.
 
 ### Bootstrap

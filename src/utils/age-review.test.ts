@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   applyDateOfBirthRules,
-  blockDueAgeReviews,
   DateOfBirthError,
   dobRequestCutoff,
   dobRequestDeadline,
+  markDueAgeReviews,
   stampAdultDeclaration,
 } from './age-review';
 
@@ -59,9 +59,16 @@ describe('applyDateOfBirthRules', () => {
     ).toEqual({ date_of_birth: '1990-01-01', age_review_status: null, age_review_requested_at: null });
   });
 
+  it('takes an account pending update back to normal when the date arrives (REA-60)', () => {
+    expect(
+      applyDateOfBirthRules({ date_of_birth: '1990-01-01' }, { date_of_birth: null, age_review_status: 'dob_update_required' }, now),
+    ).toEqual({ date_of_birth: '1990-01-01', age_review_status: null, age_review_requested_at: null });
+  });
+
   it('keeps other review statuses', () => {
     const data = { date_of_birth: '1990-01-01' };
     expect(applyDateOfBirthRules(data, { date_of_birth: null, age_review_status: 'dob_blocked' }, now)).toBe(data);
+    expect(applyDateOfBirthRules(data, { date_of_birth: null, age_review_status: 'minor_blocked' }, now)).toBe(data);
   });
 });
 
@@ -72,36 +79,47 @@ describe('dob request deadline', () => {
   });
 });
 
-describe('blockDueAgeReviews', () => {
-  it('blocks every overdue request with the cutoff of 7 days ago', async () => {
-    const db = {
-      findDue: vi.fn().mockResolvedValue([{ id: 1 }, { id: 2 }]),
-      block: vi.fn().mockResolvedValue(undefined),
-    };
-    expect(await blockDueAgeReviews(db, now)).toEqual({ blocked: 2, skippedAdmins: 0 });
+describe('markDueAgeReviews', () => {
+  const makeDb = (due: { id: number; role?: { type: string } | null }[], legacy: { id: number }[] = []) => ({
+    findDue: vi.fn().mockResolvedValue(due),
+    findLegacyBlocked: vi.fn().mockResolvedValue(legacy),
+    update: vi.fn().mockResolvedValue(undefined),
+  });
+
+  it('marks every overdue request as pending update, without blocking', async () => {
+    const db = makeDb([{ id: 1 }, { id: 2 }]);
+    expect(await markDueAgeReviews(db, now)).toEqual({ pending: 2, unblocked: 0, skippedAdmins: 0 });
     expect(db.findDue).toHaveBeenCalledWith(new Date('2026-11-05T15:00:00.000Z'));
-    expect(db.block).toHaveBeenCalledWith(1, { blocked: true, age_review_status: 'dob_blocked', age_review_blocked_at: now });
+    expect(db.update).toHaveBeenCalledWith(1, { age_review_status: 'dob_update_required' });
+    for (const [, data] of db.update.mock.calls) expect(data).not.toHaveProperty('blocked', true);
+  });
+
+  it('unblocks the accounts blocked by the old rule into pending update', async () => {
+    const db = makeDb([], [{ id: 7 }]);
+    expect(await markDueAgeReviews(db, now)).toEqual({ pending: 0, unblocked: 1, skippedAdmins: 0 });
+    expect(db.update).toHaveBeenCalledWith(7, { blocked: false, age_review_status: 'dob_update_required', age_review_blocked_at: null });
+  });
+
+  // REA-10: an admin must never end up behind the "update your data" gate because of a request
+  // sent to themselves or to every admin. Demote first, then review.
+  it('never puts an admin in the routine; everybody else becomes pending update', async () => {
+    const db = makeDb([
+      { id: 1, role: { type: 'admin' } },
+      { id: 2, role: { type: 'authenticated' } },
+      { id: 3, role: null },
+      { id: 4, role: { type: 'community-manager' } },
+    ]);
+    expect(await markDueAgeReviews(db, now)).toEqual({ pending: 3, unblocked: 0, skippedAdmins: 1 });
+    expect(db.update.mock.calls).toEqual([
+      [2, { age_review_status: 'dob_update_required' }],
+      [3, { age_review_status: 'dob_update_required' }],
+      [4, { age_review_status: 'dob_update_required' }],
+    ]);
   });
 
   it('does nothing when nobody is overdue', async () => {
-    const db = { findDue: vi.fn().mockResolvedValue([]), block: vi.fn() };
-    expect(await blockDueAgeReviews(db, now)).toEqual({ blocked: 0, skippedAdmins: 0 });
-    expect(db.block).not.toHaveBeenCalled();
-  });
-
-  // REA-10: an admin must never lose access, nor the system run out of admins, because of a
-  // date-of-birth request (one asked of themselves, or of every admin). Demote first, then block.
-  it('never blocks an admin account', async () => {
-    const db = {
-      findDue: vi.fn().mockResolvedValue([
-        { id: 1, role: { type: 'admin' } },
-        { id: 2, role: { type: 'authenticated' } },
-        { id: 3, role: null },
-        { id: 4, role: { type: 'community-manager' } },
-      ]),
-      block: vi.fn().mockResolvedValue(undefined),
-    };
-    expect(await blockDueAgeReviews(db, now)).toEqual({ blocked: 3, skippedAdmins: 1 });
-    expect(db.block.mock.calls.map(([id]) => id)).toEqual([2, 3, 4]);
+    const db = makeDb([]);
+    expect(await markDueAgeReviews(db, now)).toEqual({ pending: 0, unblocked: 0, skippedAdmins: 0 });
+    expect(db.update).not.toHaveBeenCalled();
   });
 });
