@@ -3,6 +3,7 @@ symptom: "GET /api/users (e /api/participants, /api/sw-forms, /api/communities?p
 tags: [seguranca, lgpd, strapi, permissoes, users-permissions, populate]
 evidence: fixed
 card: REA-56
+pr: https://github.com/reactivandoio/hub-community-backend/pull/37
 agent: claude
 date: 2026-11-16
 ---
