@@ -5,7 +5,7 @@
     "singularName": "user-change",
     "pluralName": "user-changes",
     "displayName": "User Change",
-    "description": "REA-63: audit trail of the account data the Hub admin corrected (written by the bff only). Keeps who, whom, when and which fields — never the values."
+    "description": "REA-63: audit trail of the account data the Hub admin corrected (written by the bff only). Keeps who, whom, when and which fields — never the values. REA-96: kind 'merge' records an account joined into `target` (`source` is the dropped one, `moved` the counts)."
   },
   "options": {
     "draftAndPublish": false
@@ -33,6 +33,22 @@
     "sessions_revoked": {
       "type": "boolean",
       "default": false
+    },
+    "kind": {
+      "type": "enumeration",
+      "enum": [
+        "edit",
+        "merge"
+      ],
+      "default": "edit"
+    },
+    "source": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "moved": {
+      "type": "json"
     }
   }
 }

@@ -32,6 +32,9 @@ export const PROTECTED_USER_FIELDS = [
   'speaker',
   // REA-63: tokens issued before it are refused (roles/session-revocation); only the bff sets it.
   'sessions_revoked_at',
+  // REA-96: set when an admin joins this account into another one; only the backend writes them.
+  'merged_into',
+  'merged_at',
 ] as const;
 
 export type UserUpdateCheck = {

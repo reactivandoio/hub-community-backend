@@ -172,6 +172,14 @@
     },
     "sessions_revoked_at": {
       "type": "datetime"
+    },
+    "merged_into": {
+      "type": "integer",
+      "required": false
+    },
+    "merged_at": {
+      "type": "datetime",
+      "required": false
     }
   }
 }

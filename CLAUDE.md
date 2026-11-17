@@ -236,6 +236,17 @@ signups moved, whether sessions ended — never the values), granted to no role 
 Changing the e-mail stamps the user's `sessions_revoked_at` (protected field): a JWT issued before it
 is anonymous, like an expired one — `src/roles/session-revocation.ts` wraps the users-permissions
 `jwt.getToken` in `register()`, and the bff's `utils/auth` checks the same.
+REA-96: joining two accounts of the same person (`api::user-merge`, custom routes only the bff's API
+token reaches: `GET /user-merges/duplicates`, `GET /user-merges/preview?keep&drop`, `POST /user-merges`).
+`utils/user-merge` lists every join table pointing at a user from `strapi.db.metadata` (a new relation
+to the user moves too; `LINK_LABELS` names it for the admin), except the audit trails (`role-change`,
+`user-change`), which keep pointing at the dropped account. The merge runs in one transaction: links
+move (rows the kept account already has are dropped; a speaker/team moves only when the kept account
+has none), certificates and certificate requests sent to the old e-mail are re-addressed, the dropped
+account is anonymized and blocked (`merged_into`, `merged_at`, `sessions_revoked_at`; never deleted)
+and the kept account's empty name/CPF/phone/date of birth are filled. Refused when the dropped account
+has a higher role than the kept one, is the admin doing it, or the two CPFs differ. The bff moves the
+Eventando signups and writes the `user-change` (`kind: merge`, `source`, `moved` counts).
 The same goes for the e-mail marketing collections (REA-29): `email-campaign`, `email-campaign-delivery`
 (`key` = `<campaign documentId>:<email>`, unique, so nobody gets a campaign twice) and
 `email-suppression` (unsubscribed e-mails, never sent a campaign). The user has `marketing_opt_in`
