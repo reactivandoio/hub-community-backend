@@ -68,6 +68,10 @@ export const PUBLIC_REVOKED_ACTIONS = [
     'user-change',
     'vote',
   ].flatMap((name) => read(`api::${name}.${name}`)),
+  // REA-96: joining accounts (custom routes, only the bff's API token reaches them).
+  'api::user-merge.user-merge.duplicates',
+  'api::user-merge.user-merge.preview',
+  'api::user-merge.user-merge.merge',
 ] as const;
 
 export const PUBLIC_ACTIONS = [
